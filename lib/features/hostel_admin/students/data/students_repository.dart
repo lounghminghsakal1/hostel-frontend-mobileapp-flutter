@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/s3_upload_service.dart';
+import '../model/select_option.dart';
 import '../model/student_model.dart';
 
 class StudentsRepository {
@@ -63,13 +64,70 @@ class StudentsRepository {
     }
   }
 
+  Future<List<SelectOption>> getDepartments() =>
+      _getOptions(ApiEndpoints.departments, 'departments', SelectOption.department);
+
+  Future<List<SelectOption>> getRooms() => _getOptions(ApiEndpoints.rooms, 'rooms', SelectOption.room);
+
+  /// Loads a list endpoint that returns either a bare array or one wrapped
+  /// under `data` / `data.<listKey>`.
+  Future<List<SelectOption>> _getOptions(
+    String endpoint,
+    String listKey,
+    SelectOption Function(Map<String, dynamic>) parse,
+  ) async {
+    try {
+      final response = await _dio.get(endpoint);
+      final data = _unwrap(response.data, 'Failed to load $listKey');
+      final list = switch (data) {
+        List<dynamic> l => l,
+        Map<String, dynamic> m when m[listKey] is List => m[listKey] as List<dynamic>,
+        _ => throw ApiException('The $listKey response was malformed'),
+      };
+      return list.map((item) => parse(item as Map<String, dynamic>)).toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> createStudent({
+    required String email,
+    required String studentName,
+    required String contactNumber,
+    required String parentMobileNumber,
+    required int departmentId,
+    required String rollNumber,
+    required String studentImageKey,
+    int? roomId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.students,
+        data: {
+          'email': email,
+          'studentName': studentName,
+          'contactNumber': contactNumber,
+          'parentMobileNumber': parentMobileNumber,
+          'departmentId': departmentId,
+          'rollNumber': rollNumber,
+          'studentImageKey': studentImageKey,
+          'roomId': ?roomId,
+        },
+      );
+      _unwrap(response.data, 'Failed to create student');
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// Uploads a profile photo directly to S3 and returns its object key, to be
-  /// sent as `studentImageKey` in [updateStudent].
-  Future<String> uploadStudentImage(String imagePath, {required int studentProfileId}) {
+  /// sent as `studentImageKey` in [createStudent] or [updateStudent].
+  /// [studentProfileId] is omitted for a student that doesn't exist yet.
+  Future<String> uploadStudentImage(String imagePath, {int? studentProfileId}) {
     return _s3.uploadJpeg(
       uploadUrlEndpoint: ApiEndpoints.studentImageUploadUrl,
       filePath: imagePath,
-      requestBody: {'studentProfileId': studentProfileId},
+      requestBody: studentProfileId == null ? null : {'studentProfileId': studentProfileId},
     );
   }
 

@@ -1,18 +1,16 @@
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/camera_permission.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../../core/widgets/section_header.dart';
-import '../../../student/attendance/screens/face_capture_screen.dart';
 import '../model/student_model.dart';
 import '../providers/students_providers.dart';
+import '../widgets/option_dropdown_field.dart';
 import '../widgets/student_avatar.dart';
+import '../widgets/student_photo_picker.dart';
 
 class StudentDetailScreen extends ConsumerWidget {
   const StudentDetailScreen({super.key, required this.studentId});
@@ -87,8 +85,8 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
   late final _nameController = TextEditingController(text: widget.student.studentName);
   late final _contactController = TextEditingController(text: widget.student.contactNumber);
   late final _parentContactController = TextEditingController(text: widget.student.parentMobileNumber);
-  late final _departmentController = TextEditingController(text: widget.student.departmentId?.toString() ?? '');
-  late final _roomController = TextEditingController(text: widget.student.roomId?.toString() ?? '');
+  late int? _departmentId = widget.student.departmentId;
+  late int? _roomId = widget.student.roomId;
 
   /// Local path of a newly picked photo, shown as the avatar preview.
   String? _pickedImagePath;
@@ -113,41 +111,23 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
     _nameController.dispose();
     _contactController.dispose();
     _parentContactController.dispose();
-    _departmentController.dispose();
-    _roomController.dispose();
     super.dispose();
   }
 
   Future<void> _takePhoto() async {
-    final granted = await ensureCameraPermission(context);
-    if (!granted || !mounted) return;
-
-    final path = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (_) => const FaceCaptureScreen(
-          lensDirection: CameraLensDirection.back,
-          hint: "Frame the student's face inside the square",
-        ),
-      ),
-    );
+    final path = await captureStudentPhoto(context);
     if (path != null) await _uploadPhoto(path);
   }
 
   Future<void> _pickFromDevice() async {
-    final XFile? file;
+    final String? path;
     try {
-      // A quality below 100 makes the picker re-encode the image as JPEG,
-      // matching the `image/jpeg` content type the upload url is signed for.
-      file = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1080,
-      );
+      path = await pickStudentPhotoFromDevice();
     } on PlatformException catch (e) {
       _showMessage(e.message ?? 'Unable to open the photo library');
       return;
     }
-    if (file != null) await _uploadPhoto(file.path);
+    if (path != null) await _uploadPhoto(path);
   }
 
   Future<void> _uploadPhoto(String path) async {
@@ -230,14 +210,13 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
   }
 
   _StudentValues _currentValues() {
-    final roomText = _roomController.text.trim();
     return (
       studentName: _nameController.text.trim(),
       contactNumber: _contactController.text.trim(),
       parentMobileNumber: _parentContactController.text.trim(),
-      departmentId: int.tryParse(_departmentController.text.trim()),
+      departmentId: _departmentId,
       studentImageKey: _uploadedImageKey ?? widget.student.studentImageKey,
-      roomId: roomText.isEmpty ? null : int.tryParse(roomText),
+      roomId: _roomId,
     );
   }
 
@@ -252,13 +231,6 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
 
   static String? _phone(String? value) =>
       (value?.trim().length ?? 0) == 10 ? null : 'Enter a 10-digit number';
-
-  static String? _positiveInt(String? value, {bool optional = false}) {
-    final v = value?.trim() ?? '';
-    if (v.isEmpty) return optional ? null : 'Required';
-    final n = int.tryParse(v);
-    return (n != null && n > 0) ? null : 'Enter a valid ID';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +281,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
           Row(
             children: [
               Expanded(
-                child: _PhotoActionButton(
+                child: PhotoActionButton(
                   icon: Icons.photo_camera_outlined,
                   label: 'Take photo',
                   onPressed: busy ? null : _takePhoto,
@@ -317,7 +289,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _PhotoActionButton(
+                child: PhotoActionButton(
                   icon: Icons.upload_rounded,
                   label: 'Upload from device',
                   onPressed: busy ? null : _pickFromDevice,
@@ -355,26 +327,28 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
             validator: _phone,
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            label: widget.student.departmentName != null
-                ? 'Department ID (${widget.student.departmentName})'
-                : 'Department ID',
+          OptionDropdownField(
+            label: 'Department',
             icon: Icons.apartment_rounded,
-            keyboardType: TextInputType.number,
-            controller: _departmentController,
-            inputFormatters: digitsOnly,
-            validator: _positiveInt,
+            options: ref.watch(departmentsProvider),
+            value: _departmentId,
+            onChanged: (id) => setState(() => _departmentId = id),
+            onRetry: () => ref.invalidate(departmentsProvider),
+            fallbackLabel: widget.student.departmentName,
+            requiredMessage: 'Required',
           ),
           const SizedBox(height: 14),
-          AppTextField(
-            label: widget.student.roomNumber != null
-                ? 'Room ID (Room ${widget.student.roomNumber}) · optional'
-                : 'Room ID · optional',
+          OptionDropdownField(
+            label: 'Room · optional',
             icon: Icons.meeting_room_outlined,
-            keyboardType: TextInputType.number,
-            controller: _roomController,
-            inputFormatters: digitsOnly,
-            validator: (v) => _positiveInt(v, optional: true),
+            options: ref.watch(roomsProvider),
+            value: _roomId,
+            onChanged: (id) => setState(() => _roomId = id),
+            onRetry: () => ref.invalidate(roomsProvider),
+            fallbackLabel: widget.student.roomNumber,
+            // Unassigning a room isn't sent in updates, so only offer "No room"
+            // while the student has none.
+            noneLabel: _savedValues.roomId == null ? 'No room' : null,
           ),
           const SizedBox(height: 28),
           GradientButton(
@@ -384,34 +358,6 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
             onPressed: _isUploadingPhoto ? null : _save,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PhotoActionButton extends StatelessWidget {
-  const _PhotoActionButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.navy,
-        side: BorderSide(color: AppColors.navyAlpha(0.18)),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );
   }

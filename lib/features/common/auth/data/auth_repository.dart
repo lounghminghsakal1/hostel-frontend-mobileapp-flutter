@@ -29,4 +29,22 @@ class AuthRepository {
       throw ApiException.fromDioException(e);
     }
   }
+
+  Future<void> setupNewPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.setupNewPassword,
+        data: {'token': token, 'newPassword': newPassword},
+      );
+      final body = response.data;
+      if (body is Map<String, dynamic> && body['status'] != null && body['status'] != 'success') {
+        throw ApiException(body['message'] as String? ?? 'Failed to set password');
+      }
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
 }

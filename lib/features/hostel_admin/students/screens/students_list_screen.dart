@@ -42,6 +42,13 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(AppRoutes.adminStudentCreate),
+        backgroundColor: AppColors.navy,
+        foregroundColor: AppColors.white,
+        icon: const Icon(Icons.person_add_alt_1_rounded),
+        label: const Text('Add student'),
+      ),
       body: Column(
         children: [
           Padding(
@@ -81,7 +88,8 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
                           ],
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                          // Bottom padding keeps the last tile clear of the add button.
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
                           itemCount: visible.length,
                           itemBuilder: (context, index) => _StudentTile(
                             student: visible[index],

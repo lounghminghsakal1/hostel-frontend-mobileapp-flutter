@@ -10,6 +10,9 @@ class ApiEndpoints {
 
   static const String login = '/auth/login';
 
+  /// Sets a student's first password from the emailed setup link token.
+  static const String setupNewPassword = '/students/setup-new-password';
+
   static const String studentHomeScreen = '/students/home';
 
   /// Returns a presigned S3 PUT url + object key for an attendance capture.
@@ -22,6 +25,10 @@ class ApiEndpoints {
   static const String students = '/students';
 
   static String studentById(int id) => '/students/$id';
+
+  static const String departments = '/students/departments';
+
+  static const String rooms = '/rooms';
 
   /// Returns a presigned S3 PUT url + object key for a student profile photo.
   static const String studentImageUploadUrl = '/uploads/student_image/upload_url';
