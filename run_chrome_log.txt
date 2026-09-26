@@ -1,0 +1,13 @@
+Launching lib\main.dart on Chrome in release mode...
+The --pwa-strategy option is deprecated and will be removed in a future Flutter release.
+For more information, see: https://github.com/flutter/flutter/issues/156910
+Compiling lib\main.dart for the Web...                             66.9s
+√ Built build\web
+
+Flutter run key commands.
+r Hot reload. 
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
