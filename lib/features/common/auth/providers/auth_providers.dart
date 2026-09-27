@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
-import '../../../hostel_admin/home/providers/admin_home_providers.dart';
 import '../../../student/home/providers/student_home_providers.dart';
 import '../data/auth_repository.dart';
 import '../model/user_role.dart';
@@ -38,10 +37,9 @@ class AuthController extends AsyncNotifier<UserRole?> {
 
   Future<void> logout() async {
     await ref.read(secureStorageProvider).clearSession();
-    // These are kept alive app-wide, so drop them to avoid showing the
-    // previous user's data after the next sign-in.
+    // Kept alive app-wide, so drop it to avoid showing the previous user's
+    // data after the next sign-in.
     ref.invalidate(studentHomeProvider);
-    ref.invalidate(adminDashboardProvider);
     state = const AsyncData(null);
   }
 }

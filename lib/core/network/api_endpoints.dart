@@ -20,6 +20,10 @@ class ApiEndpoints {
 
   static const String attendanceRecords = '/attendance_records';
 
+  /// Returns a presigned S3 GET url for a captured attendance image
+  /// (`?imageKey=<capturedImageKey>`).
+  static const String attendanceImageDownloadUrl = '/uploads/attendance_image/download_url';
+
   static const String adminDashboard = '/hostel-admin/dashboard';
 
   static const String students = '/students';
