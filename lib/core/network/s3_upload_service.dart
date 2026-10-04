@@ -35,21 +35,26 @@ class S3UploadService {
   )..interceptors.addAll([if (kDebugMode) LogInterceptor(requestHeader: true)]);
 
   /// Requests an upload slot from [uploadUrlEndpoint] (sending [requestBody]
-  /// if given), uploads the JPEG at [filePath] to it and returns the S3
-  /// object key.
+  /// and [queryParameters] if given), uploads the JPEG at [filePath] to it
+  /// and returns the S3 object key.
   Future<String> uploadJpeg({
     required String uploadUrlEndpoint,
     required String filePath,
     Map<String, dynamic>? requestBody,
+    Map<String, dynamic>? queryParameters,
   }) async {
-    final slot = await _requestUploadSlot(uploadUrlEndpoint, requestBody);
+    final slot = await _requestUploadSlot(uploadUrlEndpoint, requestBody, queryParameters);
     await _putToS3(slot.uploadUrl, filePath);
     return slot.objectKey;
   }
 
-  Future<PresignedUpload> _requestUploadSlot(String endpoint, Map<String, dynamic>? requestBody) async {
+  Future<PresignedUpload> _requestUploadSlot(
+    String endpoint,
+    Map<String, dynamic>? requestBody,
+    Map<String, dynamic>? queryParameters,
+  ) async {
     try {
-      final response = await _api.get(endpoint, data: requestBody);
+      final response = await _api.get(endpoint, data: requestBody, queryParameters: queryParameters);
       final body = response.data as Map<String, dynamic>;
       final status = body['status'];
       if (status != null && status != 'success') {

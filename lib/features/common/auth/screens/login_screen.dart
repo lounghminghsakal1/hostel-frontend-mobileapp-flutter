@@ -160,7 +160,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          onPressed: () => context.push(
+                            AppRoutes.forgotPassword,
+                            extra: _emailController.text.trim(),
+                          ),
                           child: const Text('Forgot password?'),
                         ),
                       ),

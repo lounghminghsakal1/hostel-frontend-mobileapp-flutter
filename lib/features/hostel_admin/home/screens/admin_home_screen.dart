@@ -32,7 +32,19 @@ class AdminHomeScreen extends ConsumerWidget {
             const Expanded(
               child: AttendanceRecordsView(
                 leading: [
-                  _ManageStudentsCard(),
+                  _QuickLinkCard(
+                    icon: Icons.groups_outlined,
+                    title: 'Manage Students',
+                    subtitle: 'View details, edit info and update photos',
+                    route: AppRoutes.adminStudents,
+                  ),
+                  SizedBox(height: 12),
+                  _QuickLinkCard(
+                    icon: Icons.celebration_outlined,
+                    title: 'Upcoming Events',
+                    subtitle: 'Create events and choose what students see',
+                    route: AppRoutes.adminEvents,
+                  ),
                   SizedBox(height: 24),
                 ],
               ),
@@ -49,8 +61,14 @@ class AdminHomeScreen extends ConsumerWidget {
         ],
         activeIndex: 0,
         onItemTap: (index) {
-          if (index != 2) return false;
-          context.push(AppRoutes.adminStudents);
+          final route = switch (index) {
+            1 => AppRoutes.adminRooms,
+            2 => AppRoutes.adminStudents,
+            3 => AppRoutes.adminLeaveApplications,
+            _ => null,
+          };
+          if (route == null) return false;
+          context.push(route);
           return true;
         },
       ),
@@ -58,8 +76,18 @@ class AdminHomeScreen extends ConsumerWidget {
   }
 }
 
-class _ManageStudentsCard extends StatelessWidget {
-  const _ManageStudentsCard();
+class _QuickLinkCard extends StatelessWidget {
+  const _QuickLinkCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.route,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String route;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +100,7 @@ class _ManageStudentsCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => context.push(AppRoutes.adminStudents),
+          onTap: () => context.push(route),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -83,16 +111,16 @@ class _ManageStudentsCard extends StatelessWidget {
                     gradient: AppColors.primaryGradient,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.groups_outlined, color: AppColors.white, size: 20),
+                  child: Icon(icon, color: AppColors.white, size: 20),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Manage Students',
-                        style: TextStyle(
+                      Text(
+                        title,
+                        style: const TextStyle(
                           color: AppColors.navy,
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,
@@ -100,7 +128,7 @@ class _ManageStudentsCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'View details, edit info and update photos',
+                        subtitle,
                         style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12),
                       ),
                     ],

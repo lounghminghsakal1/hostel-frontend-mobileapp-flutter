@@ -35,7 +35,11 @@ final deepLinkListenerProvider = Provider<void>((ref) {
 String? _locationFor(Uri uri) {
   if (uri.scheme != 'ourhostel') return null;
   return switch (uri.host) {
-    'setup-password' => AppRoutes.setupPasswordWithToken(uri.queryParameters['token'] ?? ''),
+    // `forgotPassword=true` marks a reset link rather than a new account's.
+    'setup-password' => AppRoutes.setupPasswordWithToken(
+        uri.queryParameters['token'] ?? '',
+        forgotPassword: uri.queryParameters['forgotPassword'] == 'true',
+      ),
     _ => null,
   };
 }

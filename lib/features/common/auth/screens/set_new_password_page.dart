@@ -9,11 +9,15 @@ import '../../../../core/widgets/gradient_button.dart';
 import '../providers/auth_providers.dart';
 
 /// Opened from the `ourhostel://setup-password?token=...` link so a student
-/// can set their first password.
+/// can set their first password, or from a reset link
+/// (`...&forgotPassword=true`) to choose a new one.
 class SetNewPasswordPage extends ConsumerStatefulWidget {
-  const SetNewPasswordPage({super.key, required this.token});
+  const SetNewPasswordPage({super.key, required this.token, this.forgotPassword = false});
 
   final String token;
+
+  /// True for a forgot-password reset link; sent along with the new password.
+  final bool forgotPassword;
 
   @override
   ConsumerState<SetNewPasswordPage> createState() => _SetNewPasswordPageState();
@@ -56,13 +60,16 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
       await ref.read(authRepositoryProvider).setupNewPassword(
             token: widget.token,
             newPassword: _passwordController.text,
+            forgotPassword: widget.forgotPassword,
           );
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       context.go(AppRoutes.login);
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Password set. You can now log in.'),
+        SnackBar(
+          content: Text(widget.forgotPassword
+              ? 'Password reset. Log in with your new password.'
+              : 'Password set. You can now log in.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -80,7 +87,7 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        title: const Text('Set New Password'),
+        title: Text(widget.forgotPassword ? 'Reset Password' : 'Set New Password'),
         backgroundColor: AppColors.white,
         foregroundColor: AppColors.navy,
         elevation: 0,
@@ -104,7 +111,9 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
             Icon(Icons.link_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
             const SizedBox(height: 14),
             Text(
-              'This password setup link is invalid. Please use the link from your email again.',
+              widget.forgotPassword
+                  ? 'This password reset link is invalid. Please request a new one.'
+                  : 'This password setup link is invalid. Please use the link from your email again.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.navyAlpha(0.6)),
             ),
@@ -126,8 +135,9 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
         children: [
           Text(
-            'Create a password for your account. It must be at least 6 characters '
-            'and include a capital letter, a small letter, a number and a special symbol.',
+            '${widget.forgotPassword ? 'Choose a new password for your account.' : 'Create a password for your account.'} '
+            'It must be at least 6 characters and include a capital letter, a small letter, '
+            'a number and a special symbol.',
             style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 14, height: 1.4),
           ),
           const SizedBox(height: 24),

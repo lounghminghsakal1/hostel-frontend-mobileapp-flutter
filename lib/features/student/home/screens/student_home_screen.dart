@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/camera_permission.dart';
 import '../../../../core/utils/location_permission.dart';
@@ -10,6 +12,7 @@ import '../../../../core/widgets/section_header.dart';
 import '../../../common/auth/widgets/logout.dart';
 import '../../attendance/providers/attendance_providers.dart';
 import '../../attendance/screens/face_capture_screen.dart';
+import '../../upcoming_events/widgets/upcoming_events_section.dart';
 import '../model/student_home_model.dart';
 import '../providers/student_home_providers.dart';
 import '../widgets/announcement_card.dart';
@@ -144,14 +147,19 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const AppBottomNav(
-        items: [
+      bottomNavigationBar: AppBottomNav(
+        items: const [
           Icons.home_rounded,
           Icons.event_note_rounded,
           Icons.fingerprint_rounded,
           Icons.person_outline_rounded,
         ],
         activeIndex: 0,
+        onItemTap: (index) {
+          if (index != 1) return false;
+          context.push(AppRoutes.studentLeaveApplications);
+          return true;
+        },
       ),
     );
   }
@@ -192,6 +200,7 @@ class _StudentHomeContent extends StatelessWidget {
             onTap: canMark ? onMarkAttendance : onRefreshStatus,
           ),
           const SizedBox(height: 26),
+          const UpcomingEventsSection(),
           const SectionHeader(title: 'Announcements'),
           const SizedBox(height: 14),
           if (home.announcements.isEmpty)
