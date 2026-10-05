@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/network/media_download_url.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_format.dart';
 import '../model/attendance_records_model.dart';
-import '../providers/admin_attendance_providers.dart';
 
 /// Absent dates beyond this many collapse into a "+N more" popup.
 const _maxInlineAbsentDates = 2;
@@ -133,26 +133,16 @@ class _CapturedImageButton extends StatelessWidget {
 }
 
 /// Requests the presigned download url when opened, then shows the image.
-class _CapturedImageDialog extends ConsumerStatefulWidget {
+class _CapturedImageDialog extends ConsumerWidget {
   const _CapturedImageDialog({required this.imageKey, required this.studentName});
 
   final String imageKey;
   final String studentName;
 
   @override
-  ConsumerState<_CapturedImageDialog> createState() => _CapturedImageDialogState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    void retry() => ref.invalidate(mediaDownloadUrlProvider(imageKey));
 
-class _CapturedImageDialogState extends ConsumerState<_CapturedImageDialog> {
-  late Future<String> _urlFuture = _fetchUrl();
-
-  Future<String> _fetchUrl() =>
-      ref.read(adminAttendanceRepositoryProvider).getAttendanceImageDownloadUrl(widget.imageKey);
-
-  void _retry() => setState(() => _urlFuture = _fetchUrl());
-
-  @override
-  Widget build(BuildContext context) {
     return Dialog(
       clipBehavior: Clip.antiAlias,
       backgroundColor: AppColors.white,
@@ -164,7 +154,7 @@ class _CapturedImageDialogState extends ConsumerState<_CapturedImageDialog> {
             padding: const EdgeInsets.fromLTRB(18, 8, 6, 8),
             child: Row(
               children: [
-                Expanded(child: Text(widget.studentName, style: _headerStyle.copyWith(fontSize: 15))),
+                Expanded(child: Text(studentName, style: _headerStyle.copyWith(fontSize: 15))),
                 IconButton(
                   tooltip: 'Close',
                   icon: const Icon(Icons.close_rounded, color: AppColors.navy),
@@ -175,19 +165,16 @@ class _CapturedImageDialogState extends ConsumerState<_CapturedImageDialog> {
           ),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
-            child: FutureBuilder<String>(
-              future: _urlFuture,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) return _message(snapshot.error.toString());
-                if (!snapshot.hasData) return _loading();
-                return Image.network(
-                  snapshot.data!,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, progress) => progress == null ? child : _loading(),
-                  errorBuilder: (_, _, _) => _message('Could not load the image'),
-                );
-              },
-            ),
+            child: ref.watch(mediaDownloadUrlProvider(imageKey)).when(
+                  loading: _loading,
+                  error: (error, _) => _message(error.toString(), retry),
+                  data: (url) => Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, progress) => progress == null ? child : _loading(),
+                    errorBuilder: (_, _, _) => _message('Could not load the image', retry),
+                  ),
+                ),
           ),
         ],
       ),
@@ -199,7 +186,7 @@ class _CapturedImageDialogState extends ConsumerState<_CapturedImageDialog> {
         child: Center(child: CircularProgressIndicator(color: AppColors.navy)),
       );
 
-  Widget _message(String text) => SizedBox(
+  Widget _message(String text, VoidCallback onRetry) => SizedBox(
         height: 240,
         child: Center(
           child: Padding(
@@ -211,7 +198,7 @@ class _CapturedImageDialogState extends ConsumerState<_CapturedImageDialog> {
                 const SizedBox(height: 10),
                 Text(text, textAlign: TextAlign.center, style: TextStyle(color: AppColors.navyAlpha(0.6))),
                 const SizedBox(height: 8),
-                TextButton(onPressed: _retry, child: const Text('Try again')),
+                TextButton(onPressed: onRetry, child: const Text('Try again')),
               ],
             ),
           ),

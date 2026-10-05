@@ -14,7 +14,7 @@ class AttendanceRepository {
   /// key, to be sent as `capturedImageKey` when marking attendance.
   Future<String> uploadAttendanceImage(String imagePath) {
     return _s3.uploadJpeg(
-      uploadUrlEndpoint: ApiEndpoints.attendanceImageUploadUrl,
+      mediaFor: MediaFor.attendanceImage,
       filePath: imagePath,
     );
   }

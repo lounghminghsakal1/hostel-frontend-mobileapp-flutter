@@ -10,11 +10,25 @@ class LeaveApplicationsRepository {
 
   final Dio _dio;
 
-  /// Admin: every application in the hostel. Student: their own, once the
-  /// backend allows the student role on this route.
-  Future<List<LeaveApplicationModel>> getLeaveApplications() async {
+  /// Admin only: every application in the hostel.
+  Future<List<LeaveApplicationModel>> getLeaveApplications() =>
+      _getList(ApiEndpoints.leaveApplications);
+
+  /// Admin only.
+  Future<LeaveApplicationModel> getLeaveApplication(int id) =>
+      _getOne(ApiEndpoints.leaveApplicationById(id));
+
+  /// Student only: the signed-in student's own applications.
+  Future<List<LeaveApplicationModel>> getMyLeaveApplications() =>
+      _getList(ApiEndpoints.myLeaveApplications);
+
+  /// Student only: one of the signed-in student's own applications.
+  Future<LeaveApplicationModel> getMyLeaveApplication(int id) =>
+      _getOne(ApiEndpoints.myLeaveApplicationById(id));
+
+  Future<List<LeaveApplicationModel>> _getList(String endpoint) async {
     try {
-      final response = await _dio.get(ApiEndpoints.leaveApplications);
+      final response = await _dio.get(endpoint);
       final data = _unwrap(response.data, 'Failed to load leave applications');
       final list = switch (data) {
         List<dynamic> l => l,
@@ -31,10 +45,9 @@ class LeaveApplicationsRepository {
     }
   }
 
-  /// Admin only.
-  Future<LeaveApplicationModel> getLeaveApplication(int id) async {
+  Future<LeaveApplicationModel> _getOne(String endpoint) async {
     try {
-      final response = await _dio.get(ApiEndpoints.leaveApplicationById(id));
+      final response = await _dio.get(endpoint);
       final data = _unwrap(response.data, 'Failed to load the leave application');
       final json = switch (data) {
         Map<String, dynamic> m when m['leaveApplication'] is Map<String, dynamic> =>

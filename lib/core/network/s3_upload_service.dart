@@ -4,10 +4,22 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'api_endpoints.dart';
 import 'api_exception.dart';
 import 'dio_client.dart';
 
-/// Presigned upload slot returned by the backend's `.../upload_url` endpoints.
+/// What an upload is for; sent as the upload url's `media_for` query param.
+enum MediaFor {
+  attendanceImage('attendance_image'),
+  studentImage('student_image'),
+  eventImage('event_image');
+
+  const MediaFor(this.queryValue);
+
+  final String queryValue;
+}
+
+/// Presigned upload slot returned by the backend's upload url endpoint.
 class PresignedUpload {
   const PresignedUpload({required this.uploadUrl, required this.objectKey});
 
@@ -34,27 +46,23 @@ class S3UploadService {
     ),
   )..interceptors.addAll([if (kDebugMode) LogInterceptor(requestHeader: true)]);
 
-  /// Requests an upload slot from [uploadUrlEndpoint] (sending [requestBody]
-  /// and [queryParameters] if given), uploads the JPEG at [filePath] to it
-  /// and returns the S3 object key.
+  /// Requests an upload slot for [mediaFor], uploads the JPEG at [filePath]
+  /// to it and returns the S3 object key.
   Future<String> uploadJpeg({
-    required String uploadUrlEndpoint,
+    required MediaFor mediaFor,
     required String filePath,
-    Map<String, dynamic>? requestBody,
-    Map<String, dynamic>? queryParameters,
   }) async {
-    final slot = await _requestUploadSlot(uploadUrlEndpoint, requestBody, queryParameters);
+    final slot = await _requestUploadSlot(mediaFor);
     await _putToS3(slot.uploadUrl, filePath);
     return slot.objectKey;
   }
 
-  Future<PresignedUpload> _requestUploadSlot(
-    String endpoint,
-    Map<String, dynamic>? requestBody,
-    Map<String, dynamic>? queryParameters,
-  ) async {
+  Future<PresignedUpload> _requestUploadSlot(MediaFor mediaFor) async {
     try {
-      final response = await _api.get(endpoint, data: requestBody, queryParameters: queryParameters);
+      final response = await _api.get(
+        ApiEndpoints.mediaUploadUrl,
+        queryParameters: {'media_for': mediaFor.queryValue},
+      );
       final body = response.data as Map<String, dynamic>;
       final status = body['status'];
       if (status != null && status != 'success') {

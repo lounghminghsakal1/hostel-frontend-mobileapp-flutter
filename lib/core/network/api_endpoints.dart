@@ -18,14 +18,7 @@ class ApiEndpoints {
 
   static const String studentHomeScreen = '/students/home';
 
-  /// Returns a presigned S3 PUT url + object key for an attendance capture.
-  static const String attendanceImageUploadUrl = '/media/attendance_image/upload_url';
-
   static const String attendanceRecords = '/attendance_records';
-
-  /// Returns a presigned S3 GET url for a captured attendance image
-  /// (`?imageKey=<capturedImageKey>`).
-  static const String attendanceImageDownloadUrl = '/media/attendance_image/download_url';
 
   static const String adminDashboard = '/hostel-admin/dashboard';
 
@@ -47,16 +40,19 @@ class ApiEndpoints {
 
   static String cancelLeaveApplication(int id) => '$leaveApplications/$id/cancel';
 
-  /// Returns a presigned S3 PUT url + object key for a student profile photo.
-  static const String studentImageUploadUrl = '/media/student_image/upload_url';
+  /// The signed-in student's own applications.
+  static const String myLeaveApplications = '$leaveApplications/student/my_leave_applications';
 
-  /// Generic presigned S3 PUT url + object key (`?media_for=<purpose>`).
-  static const String mediaUploadUrl = '/media/upload_url';
-
-  /// `media_for` value for upcoming event banner images.
-  static const String upcomingEventMediaFor = 'upcoming_event_image';
+  static String myLeaveApplicationById(int id) => '$myLeaveApplications/$id';
 
   static const String upcomingEvents = '/upcoming_events';
 
   static String upcomingEventById(int id) => '$upcomingEvents/$id';
+
+  /// Presigned S3 PUT url + object key for any upload
+  /// (`?media_for=<MediaFor.queryValue>`).
+  static const String mediaUploadUrl = '/media/upload_url';
+
+  /// Presigned S3 GET url for any uploaded object (`?image_key=<key>`).
+  static const String mediaDownloadUrl = '/media/download_url';
 }

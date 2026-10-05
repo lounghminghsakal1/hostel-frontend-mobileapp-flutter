@@ -137,10 +137,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
       _isUploadingPhoto = true;
     });
     try {
-      final key = await ref.read(studentsRepositoryProvider).uploadStudentImage(
-            path,
-            studentProfileId: widget.student.id,
-          );
+      final key = await ref.read(studentsRepositoryProvider).uploadStudentImage(path);
       if (!mounted) return;
       setState(() {
         _uploadedImageKey = key;

@@ -13,7 +13,7 @@ enum LeaveStatus {
   String get apiValue => name.toUpperCase();
 
   static LeaveStatus fromApi(Object? value) => switch (value?.toString().toUpperCase()) {
-        'PENDING' => pending,
+        'WAITING_FOR_APPROVAL' || 'PENDING' => pending,
         'APPROVED' => approved,
         'REJECTED' => rejected,
         'CANCELLED' || 'CANCELED' => cancelled,

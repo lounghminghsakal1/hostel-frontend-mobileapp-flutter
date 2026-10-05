@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/date_format.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
-import '../../../common/leave_applications/widgets/leave_application_card.dart';
-import '../../../common/leave_applications/widgets/leave_status_chip.dart';
+import '../../../common/leave_applications/widgets/leave_application_details.dart';
 
 /// One leave application in full. While it's pending the admin can approve
 /// or reject it; the screen then pops with the new [LeaveStatus].
@@ -68,7 +66,7 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
             rejectionReason: rejectionReason,
           );
       if (!mounted) return;
-      ref.invalidate(leaveApplicationDetailProvider(widget.applicationId));
+      ref.invalidate(adminLeaveApplicationDetailProvider(widget.applicationId));
       context.pop(decision);
     } catch (e) {
       if (!mounted) return;
@@ -81,7 +79,7 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
 
   @override
   Widget build(BuildContext context) {
-    final applicationAsync = ref.watch(leaveApplicationDetailProvider(widget.applicationId));
+    final applicationAsync = ref.watch(adminLeaveApplicationDetailProvider(widget.applicationId));
     final application = applicationAsync.valueOrNull;
 
     return Scaffold(
@@ -112,14 +110,14 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => ref.invalidate(leaveApplicationDetailProvider(widget.applicationId)),
+                  onPressed: () => ref.invalidate(adminLeaveApplicationDetailProvider(widget.applicationId)),
                   child: const Text('Try again'),
                 ),
               ],
             ),
           ),
         ),
-        data: (application) => _LeaveApplicationDetails(application: application),
+        data: (application) => LeaveApplicationDetails(application: application, showStudent: true),
       ),
       bottomNavigationBar: application != null && application.isPending
           ? SafeArea(
@@ -164,135 +162,6 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
               ),
             )
           : null,
-    );
-  }
-}
-
-class _LeaveApplicationDetails extends StatelessWidget {
-  const _LeaveApplicationDetails({required this.application});
-
-  final LeaveApplicationModel application;
-
-  @override
-  Widget build(BuildContext context) {
-    final createdAt = application.createdAt;
-    final reviewedAt = application.reviewedAt;
-    final rejectionReason = application.rejectionReason;
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.navySoft,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.person_outline_rounded, color: AppColors.white, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      application.studentName ?? 'Student',
-                      style: const TextStyle(
-                        color: AppColors.navy,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (application.rollNumber != null || application.roomNumber != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        [
-                          if (application.rollNumber != null) application.rollNumber!,
-                          if (application.roomNumber != null) 'Room ${application.roomNumber}',
-                        ].join(' · '),
-                        style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 12.5),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              LeaveStatusChip(status: application.status),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        _DetailRow(
-          icon: Icons.date_range_rounded,
-          label: 'Leave dates',
-          value: '${leaveDateRangeLabel(application)} · ${leaveDaysLabel(application)}',
-        ),
-        if (createdAt != null)
-          _DetailRow(
-            icon: Icons.send_outlined,
-            label: 'Applied on',
-            value: toDisplayDate(createdAt),
-          ),
-        if (reviewedAt != null)
-          _DetailRow(
-            icon: Icons.fact_check_outlined,
-            label: 'Reviewed on',
-            value: toDisplayDate(reviewedAt),
-          ),
-        _DetailRow(
-          icon: Icons.notes_rounded,
-          label: 'Reason',
-          value: application.leaveReason,
-        ),
-        if (rejectionReason != null && application.status == LeaveStatus.rejected)
-          _DetailRow(
-            icon: Icons.cancel_outlined,
-            label: 'Reason for rejection',
-            value: rejectionReason,
-          ),
-      ],
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.icon, required this.label, required this.value});
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: AppColors.navyAlpha(0.5)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(color: AppColors.navy, fontSize: 14.5, height: 1.4),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

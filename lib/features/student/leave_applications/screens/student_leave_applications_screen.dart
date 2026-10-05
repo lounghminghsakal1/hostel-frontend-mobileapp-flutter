@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
 import '../../../common/leave_applications/widgets/leave_application_card.dart';
+import '../widgets/cancel_leave_application.dart';
 import '../widgets/leave_application_form_sheet.dart';
 
 /// The student's leave applications with their review status. Pending ones
@@ -30,50 +33,21 @@ class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApp
     final messenger = ScaffoldMessenger.of(context);
     final saved = await showLeaveApplicationFormSheet(context, application: application);
     if (!saved || !mounted) return;
-    ref.invalidate(leaveApplicationsProvider);
+    ref.invalidate(myLeaveApplicationsProvider);
+    if (application != null) ref.invalidate(myLeaveApplicationDetailProvider(application.id));
     _showSnackBar(messenger, application == null ? 'Leave application submitted' : 'Leave application updated');
   }
 
-  Future<void> _cancel(LeaveApplicationModel application) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancel this leave?'),
-        content: Text(
-          'Your application for ${leaveDateRangeLabel(application)} will be withdrawn. '
-          'This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Keep it'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Cancel leave'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _cancellingId = application.id);
-    try {
-      await ref.read(leaveApplicationsRepositoryProvider).cancelLeaveApplication(application.id);
-      if (!mounted) return;
-      ref.invalidate(leaveApplicationsProvider);
-      _showSnackBar(messenger, 'Leave application cancelled');
-    } catch (e) {
-      if (mounted) _showSnackBar(messenger, e.toString());
-    } finally {
-      if (mounted) setState(() => _cancellingId = null);
-    }
-  }
+  Future<void> _cancel(LeaveApplicationModel application) => confirmAndCancelLeaveApplication(
+        context,
+        ref,
+        application,
+        onBusyChanged: (busy) => setState(() => _cancellingId = busy ? application.id : null),
+      );
 
   @override
   Widget build(BuildContext context) {
-    final applicationsAsync = ref.watch(leaveApplicationsProvider);
+    final applicationsAsync = ref.watch(myLeaveApplicationsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -97,11 +71,11 @@ class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApp
         ),
         error: (error, _) => _LeaveApplicationsError(
           message: error.toString(),
-          onRetry: () => ref.invalidate(leaveApplicationsProvider),
+          onRetry: () => ref.invalidate(myLeaveApplicationsProvider),
         ),
         data: (applications) => RefreshIndicator(
           color: AppColors.navy,
-          onRefresh: () => ref.refresh(leaveApplicationsProvider.future),
+          onRefresh: () => ref.refresh(myLeaveApplicationsProvider.future),
           child: applications.isEmpty
               ? ListView(
                   children: [
@@ -125,6 +99,7 @@ class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApp
                     final isCancelling = _cancellingId == application.id;
                     return LeaveApplicationCard(
                       application: application,
+                      onTap: () => context.push(AppRoutes.studentLeaveApplicationDetail(application.id)),
                       actions: application.isPending
                           ? [
                               TextButton.icon(

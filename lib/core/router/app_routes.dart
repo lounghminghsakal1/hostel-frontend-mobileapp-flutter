@@ -17,6 +17,7 @@ class AppRoutes {
   static String adminStudentDetail(int id) => '$adminStudents/$id';
   static const String adminRooms = '/admin/rooms';
   static const String studentLeaveApplications = '/student/leave-applications';
+  static String studentLeaveApplicationDetail(int id) => '$studentLeaveApplications/$id';
   static const String adminLeaveApplications = '/admin/leave-applications';
   static String adminLeaveApplicationDetail(int id) => '$adminLeaveApplications/$id';
   static const String studentEvents = '/student/events';

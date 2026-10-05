@@ -85,9 +85,8 @@ class UpcomingEventsRepository {
   /// to be sent as `eventImageKey`.
   Future<String> uploadEventImage(String imagePath) {
     return _s3.uploadJpeg(
-      uploadUrlEndpoint: ApiEndpoints.mediaUploadUrl,
+      mediaFor: MediaFor.eventImage,
       filePath: imagePath,
-      queryParameters: {'media_for': ApiEndpoints.upcomingEventMediaFor},
     );
   }
 

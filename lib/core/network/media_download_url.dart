@@ -6,14 +6,14 @@ import 'api_exception.dart';
 import 'dio_client.dart';
 
 /// Short-lived presigned GET url for an uploaded S3 object key, from the
-/// `.../download_url?imageKey=<key>` endpoint. Disposed when unused, so a
+/// `/media/download_url?image_key=<key>` endpoint. Disposed when unused, so a
 /// fresh url is fetched next time instead of reusing an expired one.
 final mediaDownloadUrlProvider = FutureProvider.autoDispose.family<String, String>((ref, imageKey) async {
   final dio = ref.watch(dioProvider);
   try {
     final response = await dio.get(
-      ApiEndpoints.attendanceImageDownloadUrl,
-      queryParameters: {'imageKey': imageKey},
+      ApiEndpoints.mediaDownloadUrl,
+      queryParameters: {'image_key': imageKey},
     );
     final body = response.data;
     if (body is! Map<String, dynamic>) {

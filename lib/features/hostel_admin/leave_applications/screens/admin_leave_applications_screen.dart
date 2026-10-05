@@ -44,7 +44,7 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
     final messenger = ScaffoldMessenger.of(context);
     final result = await context.push<LeaveStatus>(AppRoutes.adminLeaveApplicationDetail(application.id));
     if (result == null || !mounted) return;
-    ref.invalidate(leaveApplicationsProvider);
+    ref.invalidate(adminLeaveApplicationsProvider);
     messenger.showSnackBar(
       SnackBar(
         content: Text('Leave application ${result.label.toLowerCase()}'),
@@ -55,7 +55,7 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
 
   @override
   Widget build(BuildContext context) {
-    final applicationsAsync = ref.watch(leaveApplicationsProvider);
+    final applicationsAsync = ref.watch(adminLeaveApplicationsProvider);
     final applications = applicationsAsync.valueOrNull ?? const [];
 
     return Scaffold(
@@ -122,13 +122,13 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
               ),
               error: (error, _) => _AdminLeaveError(
                 message: error.toString(),
-                onRetry: () => ref.invalidate(leaveApplicationsProvider),
+                onRetry: () => ref.invalidate(adminLeaveApplicationsProvider),
               ),
               data: (applications) {
                 final visible = _filter(applications);
                 return RefreshIndicator(
                   color: AppColors.navy,
-                  onRefresh: () => ref.refresh(leaveApplicationsProvider.future),
+                  onRefresh: () => ref.refresh(adminLeaveApplicationsProvider.future),
                   child: visible.isEmpty
                       ? ListView(
                           children: [

@@ -16,6 +16,7 @@ import '../../features/hostel_admin/students/screens/student_detail_screen.dart'
 import '../../features/hostel_admin/students/screens/students_list_screen.dart';
 import '../../features/student/home/screens/student_home_screen.dart';
 import '../../features/common/upcoming_events/screens/event_detail_screen.dart';
+import '../../features/student/leave_applications/screens/student_leave_application_detail_screen.dart';
 import '../../features/student/leave_applications/screens/student_leave_applications_screen.dart';
 import '../../features/student/upcoming_events/screens/student_events_screen.dart';
 import 'app_routes.dart';
@@ -49,6 +50,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.studentLeaveApplications,
         builder: (context, state) => const StudentLeaveApplicationsScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (context, state) => StudentLeaveApplicationDetailScreen(
+              applicationId: int.parse(state.pathParameters['id']!),
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.studentEvents,

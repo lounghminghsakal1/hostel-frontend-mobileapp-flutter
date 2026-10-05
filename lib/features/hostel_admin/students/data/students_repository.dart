@@ -122,12 +122,10 @@ class StudentsRepository {
 
   /// Uploads a profile photo directly to S3 and returns its object key, to be
   /// sent as `studentImageKey` in [createStudent] or [updateStudent].
-  /// [studentProfileId] is omitted for a student that doesn't exist yet.
-  Future<String> uploadStudentImage(String imagePath, {int? studentProfileId}) {
+  Future<String> uploadStudentImage(String imagePath) {
     return _s3.uploadJpeg(
-      uploadUrlEndpoint: ApiEndpoints.studentImageUploadUrl,
+      mediaFor: MediaFor.studentImage,
       filePath: imagePath,
-      requestBody: studentProfileId == null ? null : {'studentProfileId': studentProfileId},
     );
   }
 

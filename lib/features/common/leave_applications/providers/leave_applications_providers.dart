@@ -8,11 +8,22 @@ final leaveApplicationsRepositoryProvider = Provider<LeaveApplicationsRepository
   return LeaveApplicationsRepository(ref.watch(dioProvider));
 });
 
-final leaveApplicationsProvider = FutureProvider.autoDispose<List<LeaveApplicationModel>>((ref) {
+/// Admin: every application in the hostel.
+final adminLeaveApplicationsProvider = FutureProvider.autoDispose<List<LeaveApplicationModel>>((ref) {
   return ref.watch(leaveApplicationsRepositoryProvider).getLeaveApplications();
 });
 
-final leaveApplicationDetailProvider =
+final adminLeaveApplicationDetailProvider =
     FutureProvider.autoDispose.family<LeaveApplicationModel, int>((ref, id) {
   return ref.watch(leaveApplicationsRepositoryProvider).getLeaveApplication(id);
+});
+
+/// Student: the signed-in student's own applications.
+final myLeaveApplicationsProvider = FutureProvider.autoDispose<List<LeaveApplicationModel>>((ref) {
+  return ref.watch(leaveApplicationsRepositoryProvider).getMyLeaveApplications();
+});
+
+final myLeaveApplicationDetailProvider =
+    FutureProvider.autoDispose.family<LeaveApplicationModel, int>((ref, id) {
+  return ref.watch(leaveApplicationsRepositoryProvider).getMyLeaveApplication(id);
 });
