@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../model/select_option.dart';
 
 /// Dropdown over options loaded from the API, showing each option's label
@@ -80,7 +81,7 @@ class OptionDropdownField extends StatelessWidget {
           initialValue: value,
           isExpanded: true,
           decoration: _decoration(),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           dropdownColor: AppColors.white,
           style: const TextStyle(color: AppColors.navy, fontSize: 15, fontWeight: FontWeight.w500),
           autovalidateMode: AutovalidateMode.onUserInteraction,

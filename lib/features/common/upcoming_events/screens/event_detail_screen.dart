@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../model/upcoming_event_model.dart';
 import '../providers/upcoming_events_providers.dart';
 import '../widgets/event_card.dart';
@@ -43,18 +44,18 @@ class EventDetailScreen extends ConsumerWidget {
         ),
         error: (error, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.xxl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.navyAlpha(0.6)),
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 TextButton(
                   onPressed: () => ref.invalidate(upcomingEventDetailProvider(eventId)),
                   child: const Text('Try again'),
@@ -100,27 +101,33 @@ class _EventDetails extends StatelessWidget {
     final contactPhone = event.contactPersonPhone;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.xxxl),
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 EventImage(event: event, iconSize: 48),
-                Positioned(top: 12, left: 12, child: EventStateBadge(event: event)),
+                Positioned(top: AppSpacing.md, left: AppSpacing.md, child: EventStateBadge(event: event)),
+                Positioned(
+                  top: AppSpacing.md,
+                  right: AppSpacing.md,
+                  child: EventDateBadge(date: event.startingAt),
+                ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl),
         Text(
           event.eventName,
-          style: const TextStyle(color: AppColors.navy, fontSize: 21, fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md),
         _InfoTile(
           icon: Icons.schedule_rounded,
           label: 'When',
@@ -142,15 +149,15 @@ class _EventDetails extends StatelessWidget {
             actionIcon: Icons.open_in_new_rounded,
             onAction: () => _open(context, linkUri),
           ),
-        const SizedBox(height: 8),
-        const Text(
+        const SizedBox(height: AppSpacing.sm),
+        Text(
           'About this event',
-          style: TextStyle(color: AppColors.navy, fontSize: 16, fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleMedium,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           event.eventDescription,
-          style: TextStyle(color: AppColors.navyAlpha(0.8), fontSize: 14, height: 1.55),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.55),
         ),
       ],
     );
@@ -175,44 +182,40 @@ class _InfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.navySoftAlt,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: onAction,
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
                     color: AppColors.navySoft,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Icon(icon, size: 18, color: AppColors.navy),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label, style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 11.5)),
+                      Text(label, style: Theme.of(context).textTheme.labelSmall),
                       const SizedBox(height: 2),
                       Text(
                         value,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.navy,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.labelLarge,
                       ),
                     ],
                   ),

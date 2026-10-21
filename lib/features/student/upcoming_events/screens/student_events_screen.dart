@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../common/upcoming_events/model/upcoming_event_model.dart';
 import '../../../common/upcoming_events/providers/upcoming_events_providers.dart';
 import '../../../common/upcoming_events/widgets/event_card.dart';
@@ -34,18 +36,18 @@ class StudentEventsScreen extends ConsumerWidget {
         ),
         error: (error, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.xxl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.navyAlpha(0.6)),
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 TextButton(
                   onPressed: () => ref.invalidate(upcomingEventsProvider),
                   child: const Text('Try again'),
@@ -61,20 +63,23 @@ class StudentEventsScreen extends ConsumerWidget {
             onRefresh: () => ref.refresh(upcomingEventsProvider.future),
             child: visible.isEmpty
                 ? ListView(
-                    children: [
-                      const SizedBox(height: 80),
-                      Icon(Icons.celebration_outlined, color: AppColors.navyAlpha(0.3), size: 44),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          'No upcoming events right now',
-                          style: TextStyle(color: AppColors.navyAlpha(0.5)),
-                        ),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      AppEmptyState(
+                        icon: Icons.celebration_outlined,
+                        title: 'Nothing on the calendar',
+                        message: 'No upcoming events right now — check back soon.',
                       ),
                     ],
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xs,
+                      AppSpacing.xl,
+                      AppSpacing.xxl,
+                    ),
                     itemCount: visible.length,
                     itemBuilder: (context, index) => EventCard(
                       event: visible[index],

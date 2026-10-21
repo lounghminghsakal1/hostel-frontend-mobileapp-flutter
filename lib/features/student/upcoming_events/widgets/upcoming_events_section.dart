@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../common/upcoming_events/providers/upcoming_events_providers.dart';
 import '../../../common/upcoming_events/widgets/event_card.dart';
@@ -23,16 +23,16 @@ class UpcomingEventsSection extends ConsumerWidget {
     final shown = events.take(_maxShown).toList();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xxl + 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
             title: 'Upcoming Events',
             trailing: 'See all',
-            onTrailingTap: () => context.push(AppRoutes.studentEvents),
+            onTrailingTap: () => context.go(AppRoutes.studentEvents),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           SizedBox(
             height: 196,
             child: ListView.separated(
@@ -40,7 +40,7 @@ class UpcomingEventsSection extends ConsumerWidget {
               // Let the cards run to the screen edge past the page padding.
               clipBehavior: Clip.none,
               itemCount: shown.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
               itemBuilder: (context, index) => SizedBox(
                 width: shown.length == 1 ? MediaQuery.sizeOf(context).width - 40 : 250,
                 child: EventCard(
@@ -52,10 +52,10 @@ class UpcomingEventsSection extends ConsumerWidget {
             ),
           ),
           if (events.length > _maxShown) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               '+${events.length - _maxShown} more',
-              style: TextStyle(color: AppColors.navyAlpha(0.5), fontSize: 12),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ],

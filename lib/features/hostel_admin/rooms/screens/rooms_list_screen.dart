@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_search_field.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../students/providers/students_providers.dart';
 import '../model/room_model.dart';
 import '../providers/rooms_providers.dart';
@@ -63,14 +66,22 @@ class _RoomsListScreenState extends ConsumerState<RoomsListScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-            child: TextField(
+            child: AppSearchField(
+              hint: 'Search by room number',
               onChanged: (value) => setState(() => _query = value),
-              decoration: InputDecoration(
-                hintText: 'Search by room number',
-                prefixIcon: Icon(Icons.search_rounded, color: AppColors.navyAlpha(0.5), size: 20),
-              ),
             ),
           ),
+          if (roomsAsync.hasValue && _query.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${_filter(roomsAsync.requireValue).length} ${_filter(roomsAsync.requireValue).length == 1 ? 'result' : 'results'}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ),
           Expanded(
             child: roomsAsync.when(
               loading: () => const Center(
@@ -87,19 +98,33 @@ class _RoomsListScreenState extends ConsumerState<RoomsListScreen> {
                   onRefresh: () => ref.refresh(roomsListProvider.future),
                   child: visible.isEmpty
                       ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
-                            const SizedBox(height: 80),
-                            Center(
-                              child: Text(
-                                rooms.isEmpty ? 'No rooms yet' : 'No rooms match your search',
-                                style: TextStyle(color: AppColors.navyAlpha(0.5)),
-                              ),
+                            AppEmptyState(
+                              icon: rooms.isEmpty
+                                  ? Icons.meeting_room_outlined
+                                  : Icons.search_off_rounded,
+                              title: rooms.isEmpty
+                                  ? 'No rooms yet'
+                                  : 'No matching rooms',
+                              message: rooms.isEmpty
+                                  ? 'Create a room to start organizing your hostel.'
+                                  : 'Try a different search or clear the search field to see all rooms.',
+                              actionLabel: rooms.isEmpty
+                                  ? 'Add your first room'
+                                  : null,
+                              onAction: rooms.isEmpty
+                                  ? () => _openForm()
+                                  : null,
                             ),
                           ],
                         )
                       : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           // Bottom padding keeps the last tile clear of the add button.
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
                           itemCount: visible.length,
                           itemBuilder: (context, index) => _RoomTile(
                             room: visible[index],
@@ -127,54 +152,64 @@ class _RoomTile extends StatelessWidget {
     final capacity = room.capacity;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.navyAlpha(0.08)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: AppColors.navySoft,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  child: const Icon(Icons.meeting_room_outlined, color: AppColors.navy, size: 22),
+                  child: const Icon(
+                    Icons.meeting_room_outlined,
+                    color: AppColors.navy,
+                    size: 22,
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Room ${room.roomNumber}',
-                        style: const TextStyle(
-                          color: AppColors.navy,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       if (capacity != null) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          'Capacity $capacity',
-                          style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.bed_outlined, size: 14, color: AppColors.navyAlpha(0.5)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Capacity $capacity',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.navyAlpha(0.55)),
+                            ),
+                          ],
                         ),
                       ],
                     ],
                   ),
                 ),
-                Icon(Icons.edit_outlined, color: AppColors.navyAlpha(0.35), size: 20),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.navyAlpha(0.35),
+                  size: 22,
+                ),
               ],
             ),
           ),
@@ -198,7 +233,11 @@ class _RoomsError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
+            Icon(
+              Icons.wifi_off_rounded,
+              color: AppColors.navyAlpha(0.4),
+              size: 40,
+            ),
             const SizedBox(height: 14),
             Text(
               message,

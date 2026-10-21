@@ -1,6 +1,9 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+
 /// Opens the camera with a face-framing guide so the subject can be
 /// positioned for capture (attendance selfie, student profile photo).
 ///
@@ -83,17 +86,41 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
             if (snapshot.hasError) {
               return Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Unable to open the camera.\n${snapshot.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white),
+                  padding: const EdgeInsets.all(AppSpacing.xxl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.no_photography_outlined,
+                        color: Colors.white.withValues(alpha: 0.7),
+                        size: 36,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Unable to open the camera.\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
             }
             return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppColors.brass),
+                  SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'Opening camera…',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -108,12 +135,22 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               ),
               _FaceGuideOverlay(hint: widget.hint),
               Positioned(
-                top: 4,
-                left: 4,
+                top: AppSpacing.sm,
+                left: AppSpacing.sm,
                 child: SafeArea(
-                  child: IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
-                    onPressed: () => Navigator.of(context).pop(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
                 ),
               ),
@@ -125,12 +162,20 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                   child: GestureDetector(
                     onTap: _capture,
                     child: Container(
-                      width: 72,
-                      height: 72,
+                      width: 76,
+                      height: 76,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
-                        border: Border.all(color: Colors.white54, width: 4),
+                        border: Border.all(color: AppColors.brass, width: 3),
+                      ),
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -159,14 +204,31 @@ class _FaceGuideOverlay extends StatelessWidget {
             width: 260,
             height: 260,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white, width: 3),
-              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.brass.withValues(alpha: 0.9),
+                width: 3,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
             ),
           ),
-          const SizedBox(height: 20),
-          Text(
-            hint,
-            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+          const SizedBox(height: AppSpacing.xl),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            child: Text(
+              hint,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),

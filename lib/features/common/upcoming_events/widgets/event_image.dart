@@ -31,12 +31,19 @@ class EventImage extends ConsumerWidget {
   Widget _network(String url) => Image.network(
         url,
         fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) => progress == null ? child : _placeholder(loading: true),
-        errorBuilder: (_, _, _) => _placeholder(),
+        // A tasteful one-shot fade once the image has actually finished
+        // loading, instead of popping in abruptly.
+        loadingBuilder: (context, child, progress) => AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          child: progress == null ? child : _placeholder(loading: true),
+        ),
+        errorBuilder: (_, _, _) => _placeholder(isError: true),
       );
 
-  Widget _placeholder({bool loading = false}) => Container(
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
+  Widget _placeholder({bool loading = false, bool isError = false}) => Container(
+        decoration: isError
+            ? const BoxDecoration(color: AppColors.navySoft)
+            : const BoxDecoration(gradient: AppColors.primaryGradient),
         alignment: Alignment.center,
         child: loading
             ? const SizedBox(
@@ -44,6 +51,10 @@ class EventImage extends ConsumerWidget {
                 height: 22,
                 child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.white),
               )
-            : Icon(Icons.celebration_outlined, color: AppColors.white.withValues(alpha: 0.85), size: iconSize),
+            : Icon(
+                isError ? Icons.image_not_supported_outlined : Icons.celebration_outlined,
+                color: isError ? AppColors.navyAlpha(0.35) : AppColors.white.withValues(alpha: 0.85),
+                size: iconSize,
+              ),
       );
 }

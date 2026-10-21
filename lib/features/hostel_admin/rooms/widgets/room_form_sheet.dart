@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../model/room_model.dart';
@@ -117,23 +118,19 @@ class _RoomFormSheetState extends ConsumerState<_RoomFormSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 _isEditing ? 'Edit Room' : 'Create Room',
-                style: const TextStyle(
-                  color: AppColors.navy,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: AppSpacing.xl),
               AppTextField(
                 label: 'Room number',
                 icon: Icons.meeting_room_outlined,
                 controller: _roomNumberController,
                 validator: _required,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.md),
               AppTextField(
                 label: 'Capacity',
                 icon: Icons.bed_outlined,
@@ -144,13 +141,13 @@ class _RoomFormSheetState extends ConsumerState<_RoomFormSheet> {
                 validator: _capacity,
               ),
               if (_error != null) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13),
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxl),
               GradientButton(
                 label: _isEditing ? 'Save changes' : 'Create room',
                 icon: _isEditing ? Icons.check_rounded : Icons.add_rounded,

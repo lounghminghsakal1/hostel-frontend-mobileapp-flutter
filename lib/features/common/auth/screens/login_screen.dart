@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -28,6 +30,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _handleLogin() {
+    if (ref.read(authControllerProvider).isLoading ||
+        !(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
     ref
         .read(authControllerProvider.notifier)
         .login(
@@ -38,8 +45,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     ref.listen(authControllerProvider, (previous, next) {
       next.whenOrNull(
         data: (role) {
@@ -47,6 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           final destination = role == UserRole.student
               ? AppRoutes.studentHome
               : AppRoutes.adminHome;
+          TextInput.finishAutofillContext();
           context.go(destination);
         },
         error: (error, _) {
@@ -59,129 +65,155 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = ref.watch(authControllerProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SizedBox.expand(
-        child: Stack(
-          children: [
-            // Header
-            Container(
-              height: size.height * 0.34,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: AppColors.headerGradient,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(36),
-                  bottomRight: Radius.circular(36),
-                ),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.apartment_rounded,
-                          color: AppColors.white,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'Hostel Management',
-                        style: TextStyle(
-                          color: AppColors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Sign in to continue',
-                        style: TextStyle(
-                          color: AppColors.white.withValues(alpha: 0.75),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Form card
-            Positioned(
-              top: size.height * 0.28,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x140B2545),
-                      blurRadius: 30,
-                      offset: Offset(0, -10),
-                    ),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+      backgroundColor: AppColors.paper,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: AutofillGroup(
+                child: Form(
+                  key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      AppTextField(
-                        label: 'Email',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        controller: _emailController,
-                      ),
-                      const SizedBox(height: 16),
-                      AppTextField(
-                        label: 'Password',
-                        icon: Icons.lock_outline_rounded,
-                        isPassword: true,
-                        controller: _passwordController,
-                      ),
-                      const SizedBox(height: 10),
                       Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => context.push(
-                            AppRoutes.forgotPassword,
-                            extra: _emailController.text.trim(),
+                        alignment: Alignment.centerLeft,
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 420),
+                          curve: Curves.easeOutBack,
+                          builder: (context, value, child) => Transform.scale(
+                            scale: 0.85 + (0.15 * value),
+                            child: Opacity(
+                              opacity: value.clamp(0, 1),
+                              child: child,
+                            ),
                           ),
-                          child: const Text('Forgot password?'),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/icon/app_logo_badge.png',
+                              width: 72,
+                              height: 72,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      GradientButton(
-                        label: 'Login',
-                        icon: Icons.arrow_forward_rounded,
-                        isLoading: isLoading,
-                        onPressed: _handleLogin,
+                      const SizedBox(height: 24),
+                      Text(
+                        'Our Hostel',
+                        style: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(color: AppColors.navyLight),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Welcome back',
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Attendance, leave and hostel updates. All in one place.',
+                        style: TextStyle(
+                          color: AppColors.navyAlpha(0.7),
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.navyAlpha(0.08)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Sign in to your account',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            AppTextField(
+                              label: 'Email address',
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [
+                                AutofillHints.username,
+                                AutofillHints.email,
+                              ],
+                              enabled: !isLoading,
+                              controller: _emailController,
+                              validator: (value) {
+                                final email = value?.trim() ?? '';
+                                if (email.isEmpty) {
+                                  return 'Enter your email address';
+                                }
+                                return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                        .hasMatch(email)
+                                    ? null
+                                    : 'Enter a valid email address';
+                              },
+                            ),
+                            const SizedBox(height: 18),
+                            AppTextField(
+                              label: 'Password',
+                              icon: Icons.lock_outline_rounded,
+                              isPassword: true,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              enabled: !isLoading,
+                              controller: _passwordController,
+                              onFieldSubmitted: (_) => _handleLogin(),
+                              validator: (value) =>
+                                  value == null || value.isEmpty
+                                  ? 'Enter your password'
+                                  : null,
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () => context.push(
+                                        AppRoutes.forgotPassword,
+                                        extra: _emailController.text.trim(),
+                                      ),
+                                child: const Text('Forgot password?'),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            GradientButton(
+                              label: 'Sign in',
+                              icon: Icons.arrow_forward_rounded,
+                              isLoading: isLoading,
+                              onPressed: _handleLogin,
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 24),
-                      Center(
-                        child: Text(
-                          'Need help? Contact hostel office',
-                          style: TextStyle(
-                            color: AppColors.navyAlpha(0.5),
-                            fontSize: 13,
-                          ),
+                      Text(
+                        'Need access or help signing in? Contact your hostel office.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.navyAlpha(0.7),
+                          fontSize: 13,
+                          height: 1.5,
                         ),
                       ),
                     ],
@@ -189,7 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

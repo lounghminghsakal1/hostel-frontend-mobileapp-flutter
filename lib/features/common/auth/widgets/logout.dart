@@ -20,7 +20,7 @@ Future<void> confirmLogout(BuildContext context, WidgetRef ref) async {
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          style: TextButton.styleFrom(foregroundColor: AppColors.navy),
+          style: TextButton.styleFrom(foregroundColor: AppColors.error),
           child: const Text('Log out'),
         ),
       ],

@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <application
-        android:label="hostel_management_frontend_mobile_app_flutter"
+        android:label="Our Hostel"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

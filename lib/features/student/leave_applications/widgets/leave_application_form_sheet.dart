@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
@@ -129,7 +130,12 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
     final days = range == null ? 0 : range.end.difference(range.start).inDays + 1;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.xl + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SafeArea(
         top: false,
         child: Form(
@@ -149,28 +155,30 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.xl),
                 Text(
                   _isEditing ? 'Edit Leave Application' : 'Apply for Leave',
-                  style: const TextStyle(
-                    color: AppColors.navy,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 18,
+                        color: AppColors.navy,
+                      ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.xl),
                 Material(
                   color: AppColors.navySoft,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                     onTap: _isSaving ? null : _pickDates,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.md,
+                      ),
                       child: Row(
                         children: [
                           Icon(Icons.date_range_rounded, color: AppColors.navyAlpha(0.6), size: 20),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +215,7 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   controller: _reasonController,
                   minLines: 3,
@@ -229,13 +237,22 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                   ),
                 ),
                 if (_error != null) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    _error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.error_outline_rounded, color: AppColors.error, size: 16),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: AppColors.error, fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xxl),
                 GradientButton(
                   label: _isEditing ? 'Save changes' : 'Submit application',
                   icon: _isEditing ? Icons.check_rounded : Icons.send_rounded,

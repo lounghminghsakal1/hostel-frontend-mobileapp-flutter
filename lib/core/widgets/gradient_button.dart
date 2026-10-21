@@ -24,56 +24,49 @@ class GradientButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final button = Container(
-      height: height,
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.navyAlpha(0.28),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(borderRadius),
-          onTap: isLoading ? null : onPressed,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: isLoading
-                ? const [
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                      ),
-                    ),
-                  ]
-                : [
-                    if (icon != null) ...[
-                      Icon(icon, color: AppColors.white, size: 20),
-                      const SizedBox(width: 10),
-                    ],
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+    final enabled = !isLoading && onPressed != null;
+    final button = Semantics(
+      liveRegion: isLoading,
+      label: isLoading ? '$label, in progress' : null,
+      child: FilledButton(
+        onPressed: enabled ? onPressed : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.navy,
+          foregroundColor: AppColors.white,
+          disabledBackgroundColor: isLoading
+              ? AppColors.navy
+              : AppColors.navySoft,
+          disabledForegroundColor: isLoading
+              ? AppColors.white
+              : AppColors.navyAlpha(0.5),
+          minimumSize: Size(0, height),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
         ),
+        child: isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: AppColors.white,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 20),
+                    const SizedBox(width: 10),
+                  ],
+                  Flexible(child: Text(label, textAlign: TextAlign.center)),
+                ],
+              ),
       ),
     );
-
-    return expand ? button : IntrinsicWidth(child: button);
+    return expand ? SizedBox(width: double.infinity, child: button) : button;
   }
 }

@@ -85,12 +85,9 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         title: Text(widget.forgotPassword ? 'Reset Password' : 'Set New Password'),
-        backgroundColor: AppColors.white,
-        foregroundColor: AppColors.navy,
-        elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
@@ -115,7 +112,7 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
                   ? 'This password reset link is invalid. Please request a new one.'
                   : 'This password setup link is invalid. Please use the link from your email again.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.navyAlpha(0.6)),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             TextButton(
@@ -138,7 +135,7 @@ class _SetNewPasswordPageState extends ConsumerState<SetNewPasswordPage> {
             '${widget.forgotPassword ? 'Choose a new password for your account.' : 'Create a password for your account.'} '
             'It must be at least 6 characters and include a capital letter, a small letter, '
             'a number and a special symbol.',
-            style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 14, height: 1.4),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
           AppTextField(

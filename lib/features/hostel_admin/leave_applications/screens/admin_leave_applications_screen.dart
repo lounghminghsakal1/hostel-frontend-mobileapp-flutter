@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
 import '../../../common/leave_applications/widgets/leave_application_card.dart';
@@ -59,10 +60,10 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
     final applications = applicationsAsync.valueOrNull ?? const [];
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         title: const Text('Leave Applications'),
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.paper,
         foregroundColor: AppColors.navy,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -70,7 +71,7 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.sm + 2),
             child: TextField(
               onChanged: (value) => setState(() => _query = value),
               decoration: InputDecoration(
@@ -82,10 +83,11 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
           SizedBox(
             height: 40,
             child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               itemCount: _filters.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
               itemBuilder: (context, index) {
                 final filter = _filters[index];
                 final selected = filter == _status;
@@ -101,20 +103,19 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
                   selected: selected,
                   showCheckmark: false,
                   onSelected: (_) => setState(() => _status = filter),
-                  backgroundColor: AppColors.navySoftAlt,
-                  selectedColor: AppColors.navy,
-                  side: BorderSide(color: selected ? AppColors.navy : AppColors.navyAlpha(0.1)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  labelStyle: TextStyle(
-                    color: selected ? AppColors.white : AppColors.navy,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  backgroundColor: selected ? null : AppColors.white,
+                  selectedColor: selected ? AppColors.brass : null,
+                  side: BorderSide(color: selected ? AppColors.brass : AppColors.navyAlpha(0.1)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
+                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: selected ? AppColors.white : AppColors.navy,
+                        fontSize: 12.5,
+                      ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Expanded(
             child: applicationsAsync.when(
               loading: () => const Center(
@@ -131,6 +132,7 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
                   onRefresh: () => ref.refresh(adminLeaveApplicationsProvider.future),
                   child: visible.isEmpty
                       ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             const SizedBox(height: 80),
                             Center(
@@ -140,13 +142,19 @@ class _AdminLeaveApplicationsScreenState extends ConsumerState<AdminLeaveApplica
                                     : _status == null
                                         ? 'No leave applications yet'
                                         : 'No ${_status!.label.toLowerCase()} applications',
-                                style: TextStyle(color: AppColors.navyAlpha(0.5)),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.navyAlpha(0.5)),
                               ),
                             ),
                           ],
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            0,
+                            AppSpacing.xl,
+                            AppSpacing.xxl,
+                          ),
                           itemCount: visible.length,
                           itemBuilder: (context, index) => LeaveApplicationCard(
                             application: visible[index],
@@ -174,18 +182,18 @@ class _AdminLeaveError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md + 2),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.navyAlpha(0.6)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.navyAlpha(0.6)),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             TextButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ),

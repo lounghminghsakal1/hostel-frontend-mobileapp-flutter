@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/gradient_button.dart';
@@ -301,14 +302,14 @@ class _EventFormState extends ConsumerState<_EventForm> {
             isUploading: _isUploadingImage,
             onTap: busy ? null : _pickImage,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Center(
             child: Text(
               'Banner image · optional · tap to ${_localImagePath != null || event?.eventImageKey != null ? 'change' : 'add'}',
-              style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12.5, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xxl),
           const SectionHeader(title: 'Details'),
           const SizedBox(height: 14),
           AppTextField(
@@ -381,37 +382,37 @@ class _EventFormState extends ConsumerState<_EventForm> {
             maxLength: 15,
           ),
           if (_isEditing) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             Container(
               decoration: BoxDecoration(
                 color: AppColors.navySoft,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
               child: SwitchListTile(
                 value: _isActive,
                 onChanged: busy ? null : (value) => setState(() => _isActive = value),
                 activeThumbColor: AppColors.white,
                 activeTrackColor: AppColors.navy,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                title: const Text(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                title: Text(
                   'Visible to students',
-                  style: TextStyle(color: AppColors.navy, fontSize: 14.5, fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
                 subtitle: Text(
                   _isActive ? 'Students can see this event' : 'Hidden from students',
-                  style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
             ),
           ],
           if (_error != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13),
             ),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xxl),
           GradientButton(
             label: _isEditing ? 'Save changes' : 'Create event',
             icon: _isEditing ? Icons.check_rounded : Icons.add_rounded,
@@ -489,23 +490,23 @@ class _DateTimeField extends StatelessWidget {
     final value = this.value;
     return Material(
       color: AppColors.navySoft,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(AppSpacing.md + 2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Icon(Icons.event_rounded, size: 16, color: AppColors.navyAlpha(0.6)),
-                  const SizedBox(width: 6),
-                  Text(label, style: TextStyle(color: AppColors.navyAlpha(0.65), fontSize: 12)),
+                  const SizedBox(width: AppSpacing.xs + 2),
+                  Text(label, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.xs + 2),
               Text(
                 value == null ? 'Tap to select' : toDisplayDate(value),
                 style: TextStyle(

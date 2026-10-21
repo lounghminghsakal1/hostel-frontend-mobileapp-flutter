@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/camera_permission.dart';
 import '../../../student/attendance/screens/face_capture_screen.dart';
 
@@ -57,8 +58,8 @@ class PhotoActionButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.navy,
         side: BorderSide(color: AppColors.navyAlpha(0.18)),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );

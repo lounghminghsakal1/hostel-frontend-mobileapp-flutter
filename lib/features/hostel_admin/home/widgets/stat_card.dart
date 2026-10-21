@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 
+/// A number tile for a single attendance metric (e.g. total/present/absent
+/// students). [filled] highlights the primary metric with the brand
+/// gradient; otherwise it reads as a plain white stat tile.
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -18,12 +22,14 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.md + 2),
       decoration: BoxDecoration(
         gradient: filled ? AppColors.primaryGradient : null,
         color: filled ? null : AppColors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: filled ? null : Border.all(color: AppColors.navyAlpha(0.08)),
         boxShadow: [
           BoxShadow(
@@ -39,12 +45,12 @@ class StatCard extends StatelessWidget {
           Icon(
             icon,
             size: 20,
-            color: filled ? AppColors.white : AppColors.navy,
+            color: filled ? AppColors.white : AppColors.brassDeep,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           Text(
             value,
-            style: TextStyle(
+            style: textTheme.titleLarge?.copyWith(
               color: filled ? AppColors.white : AppColors.navy,
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -53,10 +59,8 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             label,
-            style: TextStyle(
+            style: textTheme.labelSmall?.copyWith(
               color: filled ? AppColors.white.withValues(alpha: 0.8) : AppColors.navyAlpha(0.55),
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],

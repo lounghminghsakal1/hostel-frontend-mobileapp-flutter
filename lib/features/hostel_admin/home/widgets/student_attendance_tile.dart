@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../model/marked_student_model.dart';
 
+/// A single student's entry in an attendance-marking list. Always reflects
+/// a present mark (the face-match badge only appears once attendance is
+/// recorded), so the status pill uses the success/register colors.
 class StudentAttendanceTile extends StatelessWidget {
   const StudentAttendanceTile({super.key, required this.student});
 
@@ -10,12 +14,14 @@ class StudentAttendanceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.navyAlpha(0.08)),
       ),
       child: Row(
@@ -26,62 +32,42 @@ class StudentAttendanceTile extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Text(
               student.initials,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: textTheme.titleMedium?.copyWith(color: AppColors.white, fontSize: 14),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   student.name,
-                  style: const TextStyle(
-                    color: AppColors.navy,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: textTheme.titleMedium?.copyWith(fontSize: 14.5),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   'Roll ${student.rollNumber} · Room ${student.roomNumber}',
-                  style: TextStyle(
-                    color: AppColors.navyAlpha(0.55),
-                    fontSize: 12,
-                  ),
+                  style: textTheme.bodySmall,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.sm - 2),
                 Row(
                   children: [
                     Icon(Icons.verified_rounded, size: 13, color: AppColors.navyAlpha(0.45)),
                     const SizedBox(width: 4),
                     Text(
                       '${student.faceMatch}% match',
-                      style: TextStyle(
-                        color: AppColors.navyAlpha(0.5),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: textTheme.labelSmall,
                     ),
                     const SizedBox(width: 10),
                     Icon(Icons.location_on_outlined, size: 13, color: AppColors.navyAlpha(0.45)),
                     const SizedBox(width: 3),
                     Text(
                       'View on map',
-                      style: TextStyle(
-                        color: AppColors.navyAlpha(0.5),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: textTheme.labelSmall?.copyWith(decoration: TextDecoration.underline),
                     ),
                   ],
                 ),
@@ -94,25 +80,25 @@ class StudentAttendanceTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.navySoft,
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.successSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm - 2),
                 ),
-                child: const Text(
-                  'Present',
-                  style: TextStyle(
-                    color: AppColors.navy,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded, size: 12, color: AppColors.success),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Present',
+                      style: textTheme.labelSmall?.copyWith(color: AppColors.success, fontSize: 11),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 student.time,
-                style: TextStyle(
-                  color: AppColors.navyAlpha(0.45),
-                  fontSize: 11,
-                ),
+                style: textTheme.labelSmall?.copyWith(color: AppColors.navyAlpha(0.45)),
               ),
             ],
           ),

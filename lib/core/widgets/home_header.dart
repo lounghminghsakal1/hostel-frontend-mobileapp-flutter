@@ -42,6 +42,10 @@ class HomeHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppColors.brass.withValues(alpha: 0.6),
+                    width: 1.2,
+                  ),
                 ),
                 child: Text(
                   initials,
@@ -76,7 +80,6 @@ class HomeHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              const _HeaderIcon(icon: Icons.notifications_none_rounded),
               if (onLogout != null) ...[
                 const SizedBox(width: 10),
                 _HeaderIcon(
@@ -103,8 +106,8 @@ class _HeaderIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final box = Container(
-      width: 42,
-      height: 42,
+      width: 48,
+      height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.14),
@@ -113,9 +116,14 @@ class _HeaderIcon extends StatelessWidget {
       child: Icon(icon, color: AppColors.white, size: 22),
     );
     if (onTap == null) return box;
-    return Tooltip(
-      message: tooltip ?? '',
-      child: GestureDetector(onTap: onTap, child: box),
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onTap,
+      icon: Icon(icon, color: AppColors.white),
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        backgroundColor: AppColors.white.withValues(alpha: 0.14),
+      ),
     );
   }
 }

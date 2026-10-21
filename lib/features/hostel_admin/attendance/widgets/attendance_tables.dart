@@ -4,81 +4,32 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/network/media_download_url.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../model/attendance_records_model.dart';
 
 /// Absent dates beyond this many collapse into a "+N more" popup.
 const _maxInlineAbsentDates = 2;
 
-const _headerStyle = TextStyle(color: AppColors.navy, fontSize: 12.5, fontWeight: FontWeight.w700);
-const _cellStyle = TextStyle(color: AppColors.navy, fontSize: 13, fontWeight: FontWeight.w500);
-
-/// Horizontally scrollable table shell shared by both record tables.
-class _RecordsTable extends StatelessWidget {
-  const _RecordsTable({required this.columns, required this.rows});
-
-  final List<String> columns;
-  final List<DataRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.navyAlpha(0.08)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStatePropertyAll(AppColors.navySoft),
-          headingTextStyle: _headerStyle,
-          dataTextStyle: _cellStyle,
-          columnSpacing: 22,
-          horizontalMargin: 16,
-          dataRowMinHeight: 56,
-          dataRowMaxHeight: 64,
-          columns: [for (final c in columns) DataColumn(label: Text(c))],
-          rows: rows,
-        ),
-      ),
-    );
-  }
-}
-
+/// Present/absent attendance records, as a scannable card-per-record list —
+/// a horizontally scrolling table reads poorly at phone width once there are
+/// this many columns (name, roll no, room, image, face match, location).
 class PresentRecordsTable extends StatelessWidget {
   const PresentRecordsTable({super.key, required this.records, required this.showDate});
 
   final List<PresentAttendanceRecord> records;
 
-  /// Show a date column, for range filters where a student can appear once per day.
+  /// Show a date row, for range filters where a student can appear once per day.
   final bool showDate;
 
   @override
   Widget build(BuildContext context) {
-    return _RecordsTable(
-      columns: [
-        'Student name',
-        'Roll no.',
-        'Room',
-        if (showDate) 'Date',
-        'Captured image',
-        'Face match',
-        'Distance from hostel',
-        'Location',
-      ],
-      rows: [
-        for (final r in records)
-          DataRow(cells: [
-            DataCell(Text(r.studentName)),
-            DataCell(Text(r.rollNumber)),
-            DataCell(Text(r.roomNumber ?? '—')),
-            if (showDate) DataCell(Text(r.attendanceDate == null ? '—' : apiDateToDisplay(r.attendanceDate!))),
-            DataCell(_CapturedImageButton(imageKey: r.capturedImageKey, studentName: r.studentName)),
-            DataCell(Text(r.faceMatchingPercentage == null ? '—' : '${r.faceMatchingPercentage!.toStringAsFixed(1)}%')),
-            DataCell(_DeviationText(record: r)),
-            DataCell(_MapLinkButton(uri: r.mapUri)),
-          ]),
+    return Column(
+      children: [
+        for (final r in records) ...[
+          _PresentRecordCard(record: r, showDate: showDate),
+          if (r != records.last) const SizedBox(height: AppSpacing.md),
+        ],
       ],
     );
   }
@@ -91,42 +42,280 @@ class AbsentRecordsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _RecordsTable(
-      columns: const ['Student name', 'Roll no.', 'Room', 'Department', 'Absent dates'],
-      rows: [
-        for (final r in records)
-          DataRow(cells: [
-            DataCell(Text(r.studentName)),
-            DataCell(Text(r.rollNumber)),
-            DataCell(Text(r.roomNumber ?? '—')),
-            DataCell(Text(r.departmentName ?? '—')),
-            DataCell(_AbsentDatesCell(record: r)),
-          ]),
+    return Column(
+      children: [
+        for (final r in records) ...[
+          _AbsentRecordCard(record: r),
+          if (r != records.last) const SizedBox(height: AppSpacing.md),
+        ],
       ],
     );
   }
 }
 
-class _CapturedImageButton extends StatelessWidget {
-  const _CapturedImageButton({required this.imageKey, required this.studentName});
+/// Shared card shell: white surface, soft navy border, generous padding.
+class _RecordCard extends StatelessWidget {
+  const _RecordCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.navyAlpha(0.08)),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Soft-tinted status pill — same pattern as [LeaveStatusChip]: tinted
+/// background, solid icon/text, pill shape, no border.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.icon, required this.positive});
+
+  final String label;
+  final IconData icon;
+  final bool positive;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = positive ? AppColors.successSoft : AppColors.errorSoft;
+    final foreground = positive ? AppColors.success : AppColors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(AppRadius.pill)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foreground),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(color: foreground, fontSize: 11.5, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Name + roll no. + room header row, shared by both card kinds.
+class _RecordHeader extends StatelessWidget {
+  const _RecordHeader({required this.studentName, required this.rollNumber, required this.roomNumber, this.trailing});
+
+  final String studentName;
+  final String rollNumber;
+  final String? roomNumber;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                studentName,
+                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                roomNumber == null ? 'Roll no. $rollNumber' : 'Roll no. $rollNumber · Room $roomNumber',
+                style: textTheme.bodySmall?.copyWith(color: AppColors.navyAlpha(0.6)),
+              ),
+            ],
+          ),
+        ),
+        if (trailing != null) ...[const SizedBox(width: AppSpacing.sm), trailing!],
+      ],
+    );
+  }
+}
+
+class _PresentRecordCard extends StatelessWidget {
+  const _PresentRecordCard({required this.record, required this.showDate});
+
+  final PresentAttendanceRecord record;
+  final bool showDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final within = record.isLocatedWithinHostelRadius;
+
+    return _RecordCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CapturedImageThumbnail(imageKey: record.capturedImageKey, studentName: record.studentName),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _RecordHeader(
+                  studentName: record.studentName,
+                  rollNumber: record.rollNumber,
+                  roomNumber: record.roomNumber,
+                  trailing: const _StatusPill(label: 'Present', icon: Icons.check_circle_rounded, positive: true),
+                ),
+              ),
+            ],
+          ),
+          if (showDate && record.attendanceDate != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              apiDateToDisplay(record.attendanceDate!),
+              style: TextStyle(color: AppColors.navyAlpha(0.5), fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _FaceMatchBadge(percentage: record.faceMatchingPercentage),
+              _StatusPill(
+                label: _deviationLabel(record),
+                icon: within ? Icons.my_location_rounded : Icons.warning_amber_rounded,
+                positive: within,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _MapLinkButton(uri: record.mapUri),
+        ],
+      ),
+    );
+  }
+
+  static String _deviationLabel(PresentAttendanceRecord record) {
+    final deviation = record.locationDeviationFromHostel;
+    if (deviation == null) return record.isLocatedWithinHostelRadius ? 'Within radius' : 'Outside radius';
+    final distance = deviation >= 1000 ? '${(deviation / 1000).toStringAsFixed(2)} km' : '${deviation.round()} m';
+    return record.isLocatedWithinHostelRadius ? 'Within radius · $distance' : 'Outside radius · $distance';
+  }
+}
+
+class _AbsentRecordCard extends StatelessWidget {
+  const _AbsentRecordCard({required this.record});
+
+  final AbsentAttendanceRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    return _RecordCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _RecordHeader(
+            studentName: record.studentName,
+            rollNumber: record.rollNumber,
+            roomNumber: record.roomNumber,
+            trailing: const _StatusPill(label: 'Absent', icon: Icons.person_off_rounded, positive: false),
+          ),
+          if (record.departmentName != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              record.departmentName!,
+              style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12.5, fontWeight: FontWeight.w600),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          const Divider(height: 1),
+          const SizedBox(height: AppSpacing.md),
+          _AbsentDatesCell(record: record),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small rounded thumbnail of the captured attendance photo; fetches its
+/// presigned url lazily and shows a loading/error placeholder meanwhile. Tap
+/// opens the full-size image.
+class _CapturedImageThumbnail extends ConsumerWidget {
+  const _CapturedImageThumbnail({required this.imageKey, required this.studentName});
 
   final String? imageKey;
   final String studentName;
 
+  static const double _size = 48;
+
   @override
-  Widget build(BuildContext context) {
-    if (imageKey == null || imageKey!.isEmpty) {
-      return Tooltip(
-        message: 'No image captured',
-        child: Icon(Icons.visibility_off_outlined, color: AppColors.navyAlpha(0.3), size: 20),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final radius = BorderRadius.circular(AppRadius.sm);
+    final key = imageKey;
+
+    Widget placeholder(IconData icon) => Container(
+          decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: radius),
+          child: Icon(icon, color: AppColors.navyAlpha(0.35), size: 20),
+        );
+
+    if (key == null || key.isEmpty) {
+      return SizedBox(
+        width: _size,
+        height: _size,
+        child: Tooltip(message: 'No image captured', child: placeholder(Icons.no_photography_outlined)),
       );
     }
-    return IconButton(
-      tooltip: 'View captured image',
-      icon: const Icon(Icons.visibility_outlined, color: AppColors.navy, size: 22),
-      onPressed: () => showDialog<void>(
-        context: context,
-        builder: (_) => _CapturedImageDialog(imageKey: imageKey!, studentName: studentName),
+
+    final urlAsync = ref.watch(mediaDownloadUrlProvider(key));
+
+    return SizedBox(
+      width: _size,
+      height: _size,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (_) => _CapturedImageDialog(imageKey: key, studentName: studentName),
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: urlAsync.when(
+              loading: () => Container(
+                color: AppColors.navySoft,
+                child: const Center(
+                  child: SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
+                  ),
+                ),
+              ),
+              error: (_, _) => placeholder(Icons.broken_image_outlined),
+              data: (url) => Image.network(
+                url,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) => progress == null
+                    ? child
+                    : Container(
+                        color: AppColors.navySoft,
+                        child: const Center(
+                          child: SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
+                          ),
+                        ),
+                      ),
+                errorBuilder: (_, _, _) => placeholder(Icons.broken_image_outlined),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -146,7 +335,7 @@ class _CapturedImageDialog extends ConsumerWidget {
     return Dialog(
       clipBehavior: Clip.antiAlias,
       backgroundColor: AppColors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xl)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -154,7 +343,12 @@ class _CapturedImageDialog extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(18, 8, 6, 8),
             child: Row(
               children: [
-                Expanded(child: Text(studentName, style: _headerStyle.copyWith(fontSize: 15))),
+                Expanded(
+                  child: Text(
+                    studentName,
+                    style: const TextStyle(color: AppColors.navy, fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
                 IconButton(
                   tooltip: 'Close',
                   icon: const Icon(Icons.close_rounded, color: AppColors.navy),
@@ -206,31 +400,25 @@ class _CapturedImageDialog extends ConsumerWidget {
       );
 }
 
-class _DeviationText extends StatelessWidget {
-  const _DeviationText({required this.record});
+class _FaceMatchBadge extends StatelessWidget {
+  const _FaceMatchBadge({required this.percentage});
 
-  final PresentAttendanceRecord record;
+  final double? percentage;
 
   @override
   Widget build(BuildContext context) {
-    final deviation = record.locationDeviationFromHostel;
-    final within = record.isLocatedWithinHostelRadius;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          within ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
-          size: 16,
-          color: within ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+        Icon(Icons.face_retouching_natural_rounded, size: 16, color: AppColors.navyAlpha(0.55)),
+        const SizedBox(width: 5),
+        Text(
+          percentage == null ? 'Face match —' : 'Face match ${percentage!.toStringAsFixed(1)}%',
+          style: const TextStyle(color: AppColors.navy, fontSize: 12.5, fontWeight: FontWeight.w600),
         ),
-        const SizedBox(width: 6),
-        Text(deviation == null ? (within ? 'Within radius' : '—') : _formatDistance(deviation)),
       ],
     );
   }
-
-  static String _formatDistance(double metres) =>
-      metres >= 1000 ? '${(metres / 1000).toStringAsFixed(2)} km' : '${metres.round()} m';
 }
 
 class _MapLinkButton extends StatelessWidget {
@@ -240,23 +428,54 @@ class _MapLinkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (uri == null) return const Text('—');
-    return TextButton.icon(
-      onPressed: () async {
-        bool opened;
-        try {
-          opened = await launchUrl(uri!, mode: LaunchMode.externalApplication);
-        } catch (_) {
-          opened = false;
-        }
-        if (!opened && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open maps'), behavior: SnackBarBehavior.floating),
-          );
-        }
-      },
-      icon: const Icon(Icons.map_outlined, size: 18),
-      label: const Text('View on map'),
+    if (uri == null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_off_outlined, size: 16, color: AppColors.navyAlpha(0.35)),
+          const SizedBox(width: 5),
+          Text('No location data', style: TextStyle(color: AppColors.navyAlpha(0.45), fontSize: 12.5)),
+        ],
+      );
+    }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: () async {
+          bool opened;
+          try {
+            opened = await launchUrl(uri!, mode: LaunchMode.externalApplication);
+          } catch (_) {
+            opened = false;
+          }
+          if (!opened && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not open maps'), behavior: SnackBarBehavior.floating),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.location_on_rounded, size: 16, color: AppColors.brassDeep),
+              const SizedBox(width: 5),
+              Text(
+                'View on map',
+                style: TextStyle(
+                  color: AppColors.brassDeep,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.brassDeep.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -270,38 +489,73 @@ class _AbsentDatesCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final dates = record.absentDates.map(apiDateToDisplay).toList();
     if (dates.isEmpty) return const Text('—');
-    if (dates.length <= _maxInlineAbsentDates) return Text(dates.join(', '));
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    final inline = dates.take(_maxInlineAbsentDates).toList();
+    final overflow = dates.length - inline.length;
+
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(dates.take(_maxInlineAbsentDates).join(', ')),
-        TextButton(
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text('${record.studentName} · ${dates.length} days absent'),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: dates.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (_, i) => ListTile(
-                    dense: true,
-                    leading: Icon(Icons.event_busy_rounded, color: AppColors.navyAlpha(0.5), size: 20),
-                    title: Text(dates[i], style: _cellStyle),
+        for (final d in inline) _AbsentDateChip(label: d),
+        if (overflow > 0)
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: const Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('${record.studentName} · ${dates.length} days absent'),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: dates.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (_, i) => ListTile(
+                      dense: true,
+                      leading: Icon(Icons.event_busy_rounded, color: AppColors.navyAlpha(0.5), size: 20),
+                      title: Text(dates[i], style: const TextStyle(color: AppColors.navy, fontSize: 13)),
+                    ),
                   ),
                 ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                ],
               ),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
-              ],
             ),
+            child: Text('+$overflow more'),
           ),
-          child: Text('+${dates.length - _maxInlineAbsentDates} more'),
-        ),
       ],
+    );
+  }
+}
+
+class _AbsentDateChip extends StatelessWidget {
+  const _AbsentDateChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.errorSoft,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.event_busy_rounded, size: 13, color: AppColors.error),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(color: AppColors.error, fontSize: 11.5, fontWeight: FontWeight.w600)),
+        ],
+      ),
     );
   }
 }

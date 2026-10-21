@@ -42,6 +42,17 @@ class StudentAvatar extends StatelessWidget {
       child = Image.network(
         student.studentImageUrl!,
         fit: BoxFit.cover,
+        loadingBuilder: (context, image, progress) => progress == null
+            ? image
+            : Container(
+                color: AppColors.navySoft,
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: size * 0.32,
+                    child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
+                  ),
+                ),
+              ),
         errorBuilder: (context, error, stackTrace) => initials,
       );
     } else {

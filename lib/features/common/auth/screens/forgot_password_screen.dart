@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/gradient_button.dart';
 import '../providers/auth_providers.dart';
@@ -65,30 +66,32 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         title: const Text('Forgot Password'),
-        backgroundColor: AppColors.white,
-        foregroundColor: AppColors.navy,
-        elevation: 0,
         scrolledUnderElevation: 0,
       ),
-      body: _sentTo == null ? _form() : _sent(_sentTo!),
+      body: _sentTo == null ? _form(context) : _sent(context, _sentTo!),
     );
   }
 
-  Widget _form() {
+  Widget _form(BuildContext context) {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl,
+          AppSpacing.md,
+          AppSpacing.xxl,
+          AppSpacing.xxxl,
+        ),
         children: [
           Text(
             'Enter the email your account was created with. '
             "We'll send you a link to set a new password.",
-            style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 14, height: 1.4),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.xxl),
           AppTextField(
             label: 'Email',
             icon: Icons.email_outlined,
@@ -108,7 +111,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 
-  Widget _sent(String email) {
+  Widget _sent(BuildContext context, String email) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
       children: [
@@ -123,10 +126,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           ),
         ),
         const SizedBox(height: 22),
-        const Text(
+        Text(
           'Check your email',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.navy, fontSize: 20, fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: 10),
         Text.rich(
@@ -141,7 +144,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ],
           ),
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 14, height: 1.5),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
         ),
         const SizedBox(height: 32),
         GradientButton(

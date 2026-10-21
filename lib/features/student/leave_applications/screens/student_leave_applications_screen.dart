@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
 import '../../../common/leave_applications/widgets/leave_application_card.dart';
@@ -50,10 +52,10 @@ class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApp
     final applicationsAsync = ref.watch(myLeaveApplicationsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         title: const Text('Leave Applications'),
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.paper,
         foregroundColor: AppColors.navy,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -66,33 +68,35 @@ class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApp
         label: const Text('Apply for leave'),
       ),
       body: applicationsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.navy),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _LeaveApplicationsError(
           message: error.toString(),
           onRetry: () => ref.invalidate(myLeaveApplicationsProvider),
         ),
         data: (applications) => RefreshIndicator(
-          color: AppColors.navy,
           onRefresh: () => ref.refresh(myLeaveApplicationsProvider.future),
           child: applications.isEmpty
               ? ListView(
-                  children: [
-                    const SizedBox(height: 80),
-                    Icon(Icons.event_available_rounded, color: AppColors.navyAlpha(0.3), size: 44),
-                    const SizedBox(height: 12),
-                    Center(
-                      child: Text(
-                        'No leave applications yet',
-                        style: TextStyle(color: AppColors.navyAlpha(0.5)),
-                      ),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 40),
+                    AppEmptyState(
+                      icon: Icons.event_available_rounded,
+                      title: 'No leave applications yet',
+                      message:
+                          'Applications you submit will show up here with their review status.',
                     ),
                   ],
                 )
               : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   // Bottom padding keeps the last card clear of the apply button.
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.xs,
+                    AppSpacing.xl,
+                    96,
+                  ),
                   itemCount: applications.length,
                   itemBuilder: (context, index) {
                     final application = applications[index];
@@ -139,18 +143,24 @@ class _LeaveApplicationsError extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
-            const SizedBox(height: 14),
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: AppColors.errorSoft,
+              child: Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 26),
+            ),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.navyAlpha(0.6)),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.navyAlpha(0.65),
+                  ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             TextButton(onPressed: onRetry, child: const Text('Try again')),
           ],
         ),

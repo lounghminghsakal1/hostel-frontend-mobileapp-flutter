@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../model/leave_application_model.dart';
 import 'leave_status_chip.dart';
@@ -44,20 +45,22 @@ class LeaveApplicationCard extends StatelessWidget {
       if (application.roomNumber != null) 'Room ${application.roomNumber}',
     ].join(' · ');
 
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(color: AppColors.navyAlpha(0.08)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -69,11 +72,11 @@ class LeaveApplicationCard extends StatelessWidget {
                       height: 44,
                       decoration: BoxDecoration(
                         color: AppColors.navySoft,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: const Icon(Icons.event_note_rounded, color: AppColors.navy, size: 22),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,11 +85,7 @@ class LeaveApplicationCard extends StatelessWidget {
                             showStudent
                                 ? (application.studentName ?? 'Student')
                                 : leaveDateRangeLabel(application),
-                            style: const TextStyle(
-                              color: AppColors.navy,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: textTheme.titleMedium?.copyWith(fontSize: 14.5),
                           ),
                           const SizedBox(height: 3),
                           Text(
@@ -94,41 +93,41 @@ class LeaveApplicationCard extends StatelessWidget {
                                 ? [leaveDateRangeLabel(application), if (studentSubtitle.isNotEmpty) studentSubtitle]
                                     .join('\n')
                                 : leaveDaysLabel(application),
-                            style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12, height: 1.4),
+                            style: textTheme.bodySmall,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     LeaveStatusChip(status: application.status),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   application.leaveReason,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppColors.navyAlpha(0.8), fontSize: 13, height: 1.4),
+                  style: textTheme.bodyMedium,
                 ),
                 if (rejectionReason != null && application.status == LeaveStatus.rejected) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpacing.sm),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: AppColors.navySoftAlt,
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.errorSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       'Reason for rejection: $rejectionReason',
-                      style: TextStyle(color: AppColors.navyAlpha(0.75), fontSize: 12.5, height: 1.4),
+                      style: textTheme.bodySmall?.copyWith(color: AppColors.error),
                     ),
                   ),
                 ],
                 if (actions.isEmpty)
-                  const SizedBox(height: 4)
+                  const SizedBox(height: AppSpacing.xs)
                 else ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.sm),
                   Divider(height: 1, color: AppColors.navyAlpha(0.08)),
                   Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
                 ],

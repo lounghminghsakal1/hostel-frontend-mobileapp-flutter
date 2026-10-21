@@ -32,8 +32,8 @@ class SectionHeader extends StatelessWidget {
             onTap: onTrailingTap,
             child: Text(
               trailing!,
-              style: TextStyle(
-                color: AppColors.navyAlpha(0.6),
+              style: const TextStyle(
+                color: AppColors.brassDeep,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),

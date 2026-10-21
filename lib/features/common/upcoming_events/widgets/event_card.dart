@@ -1,9 +1,64 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../model/upcoming_event_model.dart';
 import 'event_image.dart';
+
+const _months = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+];
+
+/// Small brass-accented date tile — day number over month — for an event's
+/// start date. The one deliberate spot this screen uses the "room key"
+/// accent, since a date is naturally what it should highlight.
+class EventDateBadge extends StatelessWidget {
+  const EventDateBadge({super.key, required this.date, this.compact = false});
+
+  final DateTime date;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = compact ? 40.0 : 48.0;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.brass, width: 1.2),
+        boxShadow: [BoxShadow(color: AppColors.navyAlpha(0.15), blurRadius: 6)],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '${date.day}',
+            style: TextStyle(
+              color: AppColors.navy,
+              fontSize: compact ? 15 : 17,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+          Text(
+            _months[date.month - 1],
+            style: TextStyle(
+              color: AppColors.brassDeep,
+              fontSize: compact ? 8.5 : 9.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// `3 Oct 2026 · 5:00 PM – 8:00 PM` within a day, otherwise both full
 /// date-times.
@@ -70,12 +125,17 @@ class EventCard extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         EventImage(event: event, iconSize: compact ? 28 : 36),
-        Positioned(top: 10, left: 10, child: EventStateBadge(event: event)),
+        Positioned(top: AppSpacing.sm, left: AppSpacing.sm, child: EventStateBadge(event: event)),
+        Positioned(
+          top: AppSpacing.sm,
+          right: AppSpacing.sm,
+          child: EventDateBadge(date: event.startingAt, compact: compact),
+        ),
       ],
     );
 
     return Container(
-      margin: compact ? null : const EdgeInsets.only(bottom: 14),
+      margin: compact ? null : const EdgeInsets.only(bottom: AppSpacing.lg),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.white,

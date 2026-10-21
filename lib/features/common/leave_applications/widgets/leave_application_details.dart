@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
 import '../model/leave_application_model.dart';
 import 'leave_application_card.dart';
@@ -27,22 +28,24 @@ class LeaveApplicationDetails extends StatelessWidget {
     final title = showStudent ? (application.studentName ?? 'Student') : leaveDateRangeLabel(application);
     final subtitle = showStudent ? studentSubtitle : leaveDaysLabel(application);
 
+    final textTheme = Theme.of(context).textTheme;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl),
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.navySoft,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Icon(
                   showStudent ? Icons.person_outline_rounded : Icons.event_note_rounded,
@@ -50,25 +53,15 @@ class LeaveApplicationDetails extends StatelessWidget {
                   size: 22,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: AppColors.navy,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    Text(title, style: textTheme.titleMedium?.copyWith(fontSize: 16)),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 12.5),
-                      ),
+                      Text(subtitle, style: textTheme.bodySmall),
                     ],
                   ],
                 ),
@@ -77,7 +70,7 @@ class LeaveApplicationDetails extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppSpacing.xxl),
         if (showStudent)
           _DetailRow(
             icon: Icons.date_range_rounded,
@@ -106,6 +99,7 @@ class LeaveApplicationDetails extends StatelessWidget {
             icon: Icons.cancel_outlined,
             label: 'Reason for rejection',
             value: rejectionReason,
+            isNegative: true,
           ),
       ],
     );
@@ -113,35 +107,66 @@ class LeaveApplicationDetails extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.icon, required this.label, required this.value});
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.isNegative = false,
+  });
 
   final IconData icon;
   final String label;
   final String value;
 
+  /// True for the rejection reason — tinted to read as the status it explains.
+  final bool isNegative;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: AppColors.navyAlpha(0.5)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: AppColors.navyAlpha(0.55), fontSize: 12)),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(color: AppColors.navy, fontSize: 14.5, height: 1.4),
+    final textTheme = Theme.of(context).textTheme;
+    final accent = isNegative ? AppColors.error : AppColors.navyAlpha(0.5);
+
+    final content = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: accent),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: textTheme.labelSmall?.copyWith(color: isNegative ? AppColors.error : null),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: textTheme.bodyLarge?.copyWith(
+                  color: isNegative ? AppColors.error : AppColors.navy,
+                  fontSize: 14.5,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+
+    if (!isNegative) {
+      return Padding(padding: const EdgeInsets.only(bottom: AppSpacing.lg), child: content);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.errorSoft,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: content,
       ),
     );
   }

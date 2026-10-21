@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
 import '../../../common/leave_applications/widgets/leave_application_card.dart';
@@ -17,11 +18,17 @@ Future<bool> confirmAndCancelLeaveApplication(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
+      icon: CircleAvatar(
+        radius: 22,
+        backgroundColor: AppColors.errorSoft,
+        child: const Icon(Icons.event_busy_rounded, color: AppColors.error),
+      ),
       title: const Text('Cancel this leave?'),
       content: Text(
         'Your application for ${leaveDateRangeLabel(application)} will be withdrawn. '
         'This cannot be undone.',
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -29,6 +36,7 @@ Future<bool> confirmAndCancelLeaveApplication(
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: TextButton.styleFrom(foregroundColor: AppColors.error),
           child: const Text('Cancel leave'),
         ),
       ],

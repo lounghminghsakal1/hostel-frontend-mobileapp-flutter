@@ -14,6 +14,10 @@ class AppTextField extends StatefulWidget {
     this.validator,
     this.inputFormatters,
     this.maxLength,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.autofillHints,
+    this.enabled = true,
   });
 
   final String label;
@@ -24,6 +28,10 @@ class AppTextField extends StatefulWidget {
   final FormFieldValidator<String>? validator;
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+  final Iterable<String>? autofillHints;
+  final bool enabled;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -36,6 +44,15 @@ class _AppTextFieldState extends State<AppTextField> {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
+      enabled: widget.enabled,
+      textInputAction: widget.textInputAction,
+      onFieldSubmitted: widget.onFieldSubmitted,
+      autofillHints: widget.autofillHints,
+      autocorrect:
+          !widget.isPassword &&
+          widget.keyboardType != TextInputType.emailAddress,
+      enableSuggestions: !widget.isPassword,
+      scrollPadding: const EdgeInsets.all(32),
       validator: widget.validator,
       inputFormatters: widget.inputFormatters,
       maxLength: widget.maxLength,
@@ -50,11 +67,18 @@ class _AppTextFieldState extends State<AppTextField> {
       decoration: InputDecoration(
         labelText: widget.label,
         counterText: '',
-        prefixIcon: Icon(widget.icon, color: AppColors.navyAlpha(0.6), size: 20),
+        prefixIcon: Icon(
+          widget.icon,
+          color: AppColors.navyAlpha(0.6),
+          size: 20,
+        ),
         suffixIcon: widget.isPassword
             ? IconButton(
+                tooltip: _obscure ? 'Show password' : 'Hide password',
                 icon: Icon(
-                  _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: AppColors.navyAlpha(0.5),
                   size: 20,
                 ),

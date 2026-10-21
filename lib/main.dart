@@ -21,7 +21,7 @@ class HostelManagementApp extends ConsumerWidget {
     ref.watch(deepLinkListenerProvider);
 
     return MaterialApp.router(
-      title: 'Hostel Management',
+      title: 'Our Hostel',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,

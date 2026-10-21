@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../common/upcoming_events/model/upcoming_event_model.dart';
 import '../../../common/upcoming_events/providers/upcoming_events_providers.dart';
 import '../../../common/upcoming_events/widgets/event_card.dart';
@@ -73,6 +75,7 @@ class _AdminEventsScreenState extends ConsumerState<AdminEventsScreen> {
           SizedBox(
             height: 40,
             child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               itemCount: _EventFilter.values.length,
@@ -107,18 +110,18 @@ class _AdminEventsScreenState extends ConsumerState<AdminEventsScreen> {
               ),
               error: (error, _) => Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(AppSpacing.xxl),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: AppSpacing.md),
                       Text(
                         error.toString(),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.navyAlpha(0.6)),
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.lg),
                       TextButton(
                         onPressed: () => ref.invalidate(upcomingEventsProvider),
                         child: const Text('Try again'),
@@ -136,23 +139,26 @@ class _AdminEventsScreenState extends ConsumerState<AdminEventsScreen> {
                   onRefresh: () => ref.refresh(upcomingEventsProvider.future),
                   child: visible.isEmpty
                       ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
-                            const SizedBox(height: 80),
-                            Icon(Icons.celebration_outlined, color: AppColors.navyAlpha(0.3), size: 44),
-                            const SizedBox(height: 12),
-                            Center(
-                              child: Text(
-                                events.isEmpty
-                                    ? 'No events yet'
-                                    : 'No ${_filter.label.toLowerCase()} events',
-                                style: TextStyle(color: AppColors.navyAlpha(0.5)),
-                              ),
+                            AppEmptyState(
+                              icon: Icons.celebration_outlined,
+                              title: events.isEmpty ? 'No events yet' : 'Nothing here',
+                              message: events.isEmpty
+                                  ? 'Create your first event to let students know what\'s coming up.'
+                                  : 'No ${_filter.label.toLowerCase()} events to show.',
                             ),
                           ],
                         )
                       : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           // Bottom padding keeps the last card clear of the add button.
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xl,
+                            0,
+                            AppSpacing.xl,
+                            96,
+                          ),
                           itemCount: visible.length,
                           itemBuilder: (context, index) => EventCard(
                             event: visible[index],

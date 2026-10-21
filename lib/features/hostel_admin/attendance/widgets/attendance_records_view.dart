@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../home/widgets/stat_card.dart';
 import '../model/attendance_records_model.dart';
 import '../providers/admin_attendance_providers.dart';
@@ -124,14 +126,15 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
       color: AppColors.navy,
       onRefresh: () => ref.refresh(attendanceRecordsProvider(query).future),
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         children: [
           ...widget.leading,
-          const Text(
+          Text(
             'Attendance Records',
-            style: TextStyle(color: AppColors.navy, fontSize: 17, fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           SegmentedButton<AttendanceStatusFilter>(
             segments: const [
               ButtonSegment(
@@ -228,28 +231,32 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
           ),
         ],
       ),
-      const SizedBox(height: 22),
+      const SizedBox(height: AppSpacing.xxl),
       Text(
         isAbsent ? (isRange ? 'Students absent at least one day' : 'Absent students') : 'Attendance marked students',
-        style: const TextStyle(color: AppColors.navy, fontSize: 16, fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
       ),
-      const SizedBox(height: 12),
-      if (isEmpty)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Center(
-            child: Text(
-              isAbsent ? 'No absent students for this period' : 'No attendance marked for this period',
-              style: TextStyle(color: AppColors.navyAlpha(0.5)),
-            ),
-          ),
-        )
-      else if (isAbsent)
-        AbsentRecordsTable(records: result.absentRecords)
-      else
-        PresentRecordsTable(records: result.presentRecords, showDate: isRange),
+      const SizedBox(height: AppSpacing.md),
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        child: isEmpty
+            ? AppEmptyState(
+                key: ValueKey('empty-$isAbsent'),
+                icon: isAbsent ? Icons.person_off_outlined : Icons.how_to_reg_rounded,
+                title: isAbsent ? 'No absent students' : 'No attendance marked',
+                message: isAbsent
+                    ? 'No absent students for this period.'
+                    : 'No attendance marked for this period.',
+              )
+            : Container(
+                key: ValueKey('records-$isAbsent-$_page'),
+                child: isAbsent
+                    ? AbsentRecordsTable(records: result.absentRecords)
+                    : PresentRecordsTable(records: result.presentRecords, showDate: isRange),
+              ),
+      ),
       if (result.pagination.totalPages > 1) ...[
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md),
         _Pager(
           page: _page,
           totalPages: result.pagination.totalPages,

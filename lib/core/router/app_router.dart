@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,6 +21,7 @@ import '../../features/student/leave_applications/screens/student_leave_applicat
 import '../../features/student/leave_applications/screens/student_leave_applications_screen.dart';
 import '../../features/student/upcoming_events/screens/student_events_screen.dart';
 import 'app_routes.dart';
+import '../widgets/app_bottom_nav.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -43,93 +45,180 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           initialEmail: state.extra is String ? state.extra as String : null,
         ),
       ),
-      GoRoute(
-        path: AppRoutes.studentHome,
-        builder: (context, state) => const StudentHomeScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.studentLeaveApplications,
-        builder: (context, state) => const StudentLeaveApplicationsScreen(),
-        routes: [
-          GoRoute(
-            path: ':id',
-            builder: (context, state) => StudentLeaveApplicationDetailScreen(
-              applicationId: int.parse(state.pathParameters['id']!),
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.studentEvents,
-        builder: (context, state) => const StudentEventsScreen(),
-        routes: [
-          GoRoute(
-            path: ':id',
-            builder: (context, state) => EventDetailScreen(
-              eventId: int.parse(state.pathParameters['id']!),
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.adminHome,
-        builder: (context, state) => const AdminHomeScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminRooms,
-        builder: (context, state) => const RoomsListScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.adminLeaveApplications,
-        builder: (context, state) => const AdminLeaveApplicationsScreen(),
-        routes: [
-          GoRoute(
-            path: ':id',
-            builder: (context, state) => AdminLeaveApplicationDetailScreen(
-              applicationId: int.parse(state.pathParameters['id']!),
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.adminEvents,
-        builder: (context, state) => const AdminEventsScreen(),
-        routes: [
-          // Must come before `:id` so "new" isn't parsed as an event id.
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const EventFormScreen(),
-          ),
-          GoRoute(
-            path: ':id',
-            builder: (context, state) => AdminEventDetailScreen(
-              eventId: int.parse(state.pathParameters['id']!),
-            ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          const destinations = [
+            AppRoutes.studentHome,
+            AppRoutes.studentLeaveApplications,
+            AppRoutes.studentEvents,
+            AppRoutes.adminHome,
+            AppRoutes.adminRooms,
+            AppRoutes.adminLeaveApplications,
+            AppRoutes.adminEvents,
+            AppRoutes.adminStudents,
+          ];
+          final isStudent = navigationShell.currentIndex < 3;
+          final offset = isStudent ? 0 : 3;
+          return Scaffold(
+            body: navigationShell,
+            bottomNavigationBar: destinations.contains(state.uri.path)
+                ? AppBottomNav(
+                    items: isStudent
+                        ? const [
+                            Icons.home_rounded,
+                            Icons.event_note_rounded,
+                            Icons.celebration_outlined,
+                          ]
+                        : const [
+                            Icons.home_rounded,
+                            Icons.meeting_room_outlined,
+                            Icons.event_note_rounded,
+                            Icons.celebration_outlined,
+                            Icons.groups_outlined,
+                          ],
+                    labels: isStudent
+                        ? const ['Home', 'Leave', 'Events']
+                        : const [
+                            'Home',
+                            'Rooms',
+                            'Leave',
+                            'Events',
+                            'Students',
+                          ],
+                    activeIndex: navigationShell.currentIndex - offset,
+                    onItemTap: (index) {
+                      navigationShell.goBranch(index + offset);
+                    },
+                  )
+                : null,
+          );
+        },
+        branches: [
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: 'edit',
-                builder: (context, state) => EventFormScreen(
-                  eventId: int.parse(state.pathParameters['id']!),
-                ),
+                path: AppRoutes.studentHome,
+                builder: (context, state) => const StudentHomeScreen(),
               ),
             ],
           ),
-        ],
-      ),
-      GoRoute(
-        path: AppRoutes.adminStudents,
-        builder: (context, state) => const StudentsListScreen(),
-        routes: [
-          // Must come before `:id` so "new" isn't parsed as a student id.
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const CreateStudentScreen(),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentLeaveApplications,
+                builder: (context, state) =>
+                    const StudentLeaveApplicationsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) =>
+                        StudentLeaveApplicationDetailScreen(
+                          applicationId: int.parse(state.pathParameters['id']!),
+                        ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          GoRoute(
-            path: ':id',
-            builder: (context, state) => StudentDetailScreen(
-              studentId: int.parse(state.pathParameters['id']!),
-            ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentEvents,
+                builder: (context, state) => const StudentEventsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => EventDetailScreen(
+                      eventId: int.parse(state.pathParameters['id']!),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminHome,
+                builder: (context, state) => const AdminHomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminRooms,
+                builder: (context, state) => const RoomsListScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminLeaveApplications,
+                builder: (context, state) =>
+                    const AdminLeaveApplicationsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) =>
+                        AdminLeaveApplicationDetailScreen(
+                          applicationId: int.parse(state.pathParameters['id']!),
+                        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminEvents,
+                builder: (context, state) => const AdminEventsScreen(),
+                routes: [
+                  // Must come before `:id` so "new" isn't parsed as an event id.
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const EventFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => AdminEventDetailScreen(
+                      eventId: int.parse(state.pathParameters['id']!),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) => EventFormScreen(
+                          eventId: int.parse(state.pathParameters['id']!),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminStudents,
+                builder: (context, state) => const StudentsListScreen(),
+                routes: [
+                  // Must come before `:id` so "new" isn't parsed as a student id.
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const CreateStudentScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => StudentDetailScreen(
+                      studentId: int.parse(state.pathParameters['id']!),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),

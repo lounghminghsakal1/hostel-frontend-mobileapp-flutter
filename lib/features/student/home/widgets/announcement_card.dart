@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../model/announcement_model.dart';
 
 class AnnouncementCard extends StatelessWidget {
@@ -10,12 +11,13 @@ class AnnouncementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppRadius.lg + 2),
         border: Border.all(color: AppColors.navyAlpha(0.08)),
       ),
       child: Row(
@@ -29,18 +31,18 @@ class AnnouncementCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Container(
             width: 38,
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: AppColors.navySoft,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.sm + 2),
             ),
             child: Icon(announcement.icon, color: AppColors.navy, size: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,28 +53,26 @@ class AnnouncementCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         announcement.title,
-                        style: const TextStyle(
-                          color: AppColors.navy,
+                        style: textTheme.titleMedium?.copyWith(
                           fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
+                          color: AppColors.navy,
                         ),
                       ),
                     ),
                     Text(
                       announcement.time,
-                      style: TextStyle(
+                      style: textTheme.bodySmall?.copyWith(
                         color: AppColors.navyAlpha(0.45),
-                        fontSize: 11.5,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   announcement.message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: textTheme.bodySmall?.copyWith(
                     color: AppColors.navyAlpha(0.6),
                     fontSize: 12.5,
                     height: 1.35,
