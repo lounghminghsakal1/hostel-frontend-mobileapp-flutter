@@ -1,3 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/network/media_download_url.dart';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,7 +11,7 @@ import '../model/student_model.dart';
 
 /// Rounded-square avatar: a freshly picked local photo if given, otherwise
 /// the student's hosted photo, falling back to their initials.
-class StudentAvatar extends StatelessWidget {
+class StudentAvatar extends ConsumerWidget {
   const StudentAvatar({
     super.key,
     required this.student,
@@ -20,11 +24,14 @@ class StudentAvatar extends StatelessWidget {
   final String? localImagePath;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final radius = BorderRadius.circular(size * 0.32);
     final initials = Container(
       alignment: Alignment.center,
-      decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: radius),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: radius,
+      ),
       child: Text(
         student.initials,
         style: TextStyle(
@@ -49,12 +56,37 @@ class StudentAvatar extends StatelessWidget {
                 child: Center(
                   child: SizedBox.square(
                     dimension: size * 0.32,
-                    child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.navy,
+                    ),
                   ),
                 ),
               ),
-        errorBuilder: (context, error, stackTrace) => initials,
+        errorBuilder: (context, error, stackTrace) => _ProfileKeyImage(
+          imageKey: student.studentImageKey,
+          placeholder: initials,
+        ),
       );
+    } else if (student.studentImageKey?.isNotEmpty ?? false) {
+      final key = student.studentImageKey!;
+      child = ref
+          .watch(mediaDownloadUrlProvider(key))
+          .when(
+            loading: () => initials,
+            error: (_, _) => GestureDetector(
+              onTap: () => ref.invalidate(mediaDownloadUrlProvider(key)),
+              child: initials,
+            ),
+            data: (url) => Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => GestureDetector(
+                onTap: () => ref.invalidate(mediaDownloadUrlProvider(key)),
+                child: initials,
+              ),
+            ),
+          );
     } else {
       child = initials;
     }
@@ -64,5 +96,28 @@ class StudentAvatar extends StatelessWidget {
       height: size,
       child: ClipRRect(borderRadius: radius, child: child),
     );
+  }
+}
+
+/// A failed signed detail URL can be renewed using the underlying object key.
+class _ProfileKeyImage extends ConsumerWidget {
+  const _ProfileKeyImage({required this.imageKey, required this.placeholder});
+  final String? imageKey;
+  final Widget placeholder;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final key = imageKey;
+    if (key == null || key.isEmpty) return placeholder;
+    return ref
+        .watch(mediaDownloadUrlProvider(key))
+        .when(
+          loading: () => placeholder,
+          error: (_, _) => placeholder,
+          data: (url) => Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => placeholder,
+          ),
+        );
   }
 }

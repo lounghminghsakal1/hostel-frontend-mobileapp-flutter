@@ -28,8 +28,12 @@ class EventFormScreen extends ConsumerWidget {
     if (id == null) {
       body = const _EventForm();
     } else {
-      body = ref.watch(upcomingEventDetailProvider(id)).when(
-            loading: () => const Center(child: CircularProgressIndicator(color: AppColors.navy)),
+      body = ref
+          .watch(upcomingEventDetailProvider(id))
+          .when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(color: AppColors.navy),
+            ),
             error: (error, _) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -43,7 +47,8 @@ class EventFormScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () => ref.invalidate(upcomingEventDetailProvider(id)),
+                      onPressed: () =>
+                          ref.invalidate(upcomingEventDetailProvider(id)),
                       child: const Text('Try again'),
                     ),
                   ],
@@ -79,11 +84,21 @@ class _EventForm extends ConsumerStatefulWidget {
 
 class _EventFormState extends ConsumerState<_EventForm> {
   final _formKey = GlobalKey<FormState>();
-  late final _nameController = TextEditingController(text: widget.event?.eventName);
-  late final _descriptionController = TextEditingController(text: widget.event?.eventDescription);
-  late final _linkController = TextEditingController(text: widget.event?.eventLink);
-  late final _contactNameController = TextEditingController(text: widget.event?.contactPersonName);
-  late final _contactPhoneController = TextEditingController(text: widget.event?.contactPersonPhone);
+  late final _nameController = TextEditingController(
+    text: widget.event?.eventName,
+  );
+  late final _descriptionController = TextEditingController(
+    text: widget.event?.eventDescription,
+  );
+  late final _linkController = TextEditingController(
+    text: widget.event?.eventLink,
+  );
+  late final _contactNameController = TextEditingController(
+    text: widget.event?.contactPersonName,
+  );
+  late final _contactPhoneController = TextEditingController(
+    text: widget.event?.contactPersonPhone,
+  );
 
   late DateTime? _startingAt = widget.event?.startingAt;
   late DateTime? _endingAt = widget.event?.endingAt;
@@ -124,7 +139,11 @@ class _EventFormState extends ConsumerState<_EventForm> {
       );
       path = file?.path;
     } on PlatformException catch (e) {
-      if (mounted) setState(() => _error = e.message ?? 'Could not open the photo library');
+      if (mounted) {
+        setState(
+          () => _error = e.message ?? 'Could not open the photo library',
+        );
+      }
       return;
     }
     if (path == null || !mounted) return;
@@ -136,7 +155,9 @@ class _EventFormState extends ConsumerState<_EventForm> {
       _error = null;
     });
     try {
-      final key = await ref.read(upcomingEventsRepositoryProvider).uploadEventImage(path);
+      final key = await ref
+          .read(upcomingEventsRepositoryProvider)
+          .uploadEventImage(path);
       if (!mounted) return;
       setState(() {
         _uploadedImageKey = key;
@@ -153,9 +174,12 @@ class _EventFormState extends ConsumerState<_EventForm> {
     }
   }
 
-  Future<DateTime?> _pickDateTime(DateTime? current, {DateTime? notBefore}) async {
-    final now = DateTime.now();
-    final initial = current ?? notBefore ?? now;
+  Future<DateTime?> _pickDateTime(
+    DateTime? current, {
+    DateTime? notBefore,
+  }) async {
+    final now = indiaWallTime(DateTime.now());
+    final initial = indiaWallTime(current ?? notBefore ?? DateTime.now());
     final date = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -169,7 +193,9 @@ class _EventFormState extends ConsumerState<_EventForm> {
       initialTime: TimeOfDay.fromDateTime(initial),
     );
     if (time == null) return null;
-    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    return indiaPickerToInstant(
+      DateTime(date.year, date.month, date.day, time.hour, time.minute),
+    );
   }
 
   Future<void> _pickStart() async {
@@ -207,7 +233,10 @@ class _EventFormState extends ConsumerState<_EventForm> {
     final text = value?.trim() ?? '';
     if (text.isEmpty) return null;
     final uri = Uri.tryParse(text);
-    final valid = uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && uri.host.isNotEmpty;
+    final valid =
+        uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty;
     return valid ? null : 'Enter a full link starting with https://';
   }
 
@@ -226,8 +255,8 @@ class _EventFormState extends ConsumerState<_EventForm> {
       setState(() => _error = 'Select when the event starts and ends');
       return;
     }
-    if (!end.isAfter(start)) {
-      setState(() => _error = 'The event must end after it starts');
+    if (end.isBefore(start)) {
+      setState(() => _error = 'The event cannot end before it starts');
       return;
     }
     if (!formValid) return;
@@ -260,7 +289,8 @@ class _EventFormState extends ConsumerState<_EventForm> {
       } else {
         // Only send the fields that actually changed. The API can't clear an
         // optional field, so an emptied one is left as it was.
-        T? changed<T>(T? value, T? original) => value == original ? null : value;
+        T? changed<T>(T? value, T? original) =>
+            value == original ? null : value;
         await repository.updateUpcomingEvent(event.id, (
           eventName: changed(name, event.eventName),
           eventDescription: changed(description, event.eventDescription),
@@ -328,7 +358,11 @@ class _EventFormState extends ConsumerState<_EventForm> {
             textCapitalization: TextCapitalization.sentences,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             validator: _required,
-            style: const TextStyle(color: AppColors.navy, fontSize: 15, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              color: AppColors.navy,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
             decoration: const InputDecoration(
               labelText: 'Description',
               alignLabelWithHint: true,
@@ -378,7 +412,9 @@ class _EventFormState extends ConsumerState<_EventForm> {
             icon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             controller: _contactPhoneController,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+            ],
             maxLength: 15,
           ),
           if (_isEditing) ...[
@@ -390,16 +426,22 @@ class _EventFormState extends ConsumerState<_EventForm> {
               ),
               child: SwitchListTile(
                 value: _isActive,
-                onChanged: busy ? null : (value) => setState(() => _isActive = value),
+                onChanged: busy
+                    ? null
+                    : (value) => setState(() => _isActive = value),
                 activeThumbColor: AppColors.white,
                 activeTrackColor: AppColors.navy,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
                 title: Text(
                   'Visible to students',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 subtitle: Text(
-                  _isActive ? 'Students can see this event' : 'Hidden from students',
+                  _isActive
+                      ? 'Students can see this event'
+                      : 'Hidden from students',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -409,7 +451,10 @@ class _EventFormState extends ConsumerState<_EventForm> {
             const SizedBox(height: AppSpacing.lg),
             Text(
               _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 13),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 13,
+              ),
             ),
           ],
           const SizedBox(height: AppSpacing.xxl),
@@ -443,12 +488,17 @@ class _BannerPicker extends StatelessWidget {
     final Widget image;
     if (localImagePath != null) {
       image = Image.file(File(localImagePath!), fit: BoxFit.cover);
-    } else if (event != null && (event!.eventImageKey != null || event!.eventImageUrl != null)) {
+    } else if (event != null &&
+        (event!.eventImageKey != null || event!.eventImageUrl != null)) {
       image = EventImage(event: event!);
     } else {
       image = Container(
         color: AppColors.navyAlpha(0.06),
-        child: Icon(Icons.add_photo_alternate_outlined, color: AppColors.navyAlpha(0.4), size: 38),
+        child: Icon(
+          Icons.add_photo_alternate_outlined,
+          color: AppColors.navyAlpha(0.4),
+          size: 38,
+        ),
       );
     }
 
@@ -467,7 +517,9 @@ class _BannerPicker extends StatelessWidget {
                 if (isUploading)
                   Container(
                     color: AppColors.navyAlpha(0.45),
-                    child: const Center(child: CircularProgressIndicator(color: AppColors.white)),
+                    child: const Center(
+                      child: CircularProgressIndicator(color: AppColors.white),
+                    ),
                   ),
               ],
             ),
@@ -479,7 +531,11 @@ class _BannerPicker extends StatelessWidget {
 }
 
 class _DateTimeField extends StatelessWidget {
-  const _DateTimeField({required this.label, required this.value, required this.onTap});
+  const _DateTimeField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
 
   final String label;
   final DateTime? value;
@@ -501,16 +557,24 @@ class _DateTimeField extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.event_rounded, size: 16, color: AppColors.navyAlpha(0.6)),
+                  Icon(
+                    Icons.event_rounded,
+                    size: 16,
+                    color: AppColors.navyAlpha(0.6),
+                  ),
                   const SizedBox(width: AppSpacing.xs + 2),
                   Text(label, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
               const SizedBox(height: AppSpacing.xs + 2),
               Text(
-                value == null ? 'Tap to select' : toDisplayDate(value),
+                value == null
+                    ? 'Tap to select'
+                    : toDisplayDate(indiaWallTime(value)),
                 style: TextStyle(
-                  color: value == null ? AppColors.navyAlpha(0.45) : AppColors.navy,
+                  color: value == null
+                      ? AppColors.navyAlpha(0.45)
+                      : AppColors.navy,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -518,8 +582,11 @@ class _DateTimeField extends StatelessWidget {
               if (value != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  toDisplayTime(value),
-                  style: TextStyle(color: AppColors.navyAlpha(0.6), fontSize: 13),
+                  '${toDisplayTime(indiaWallTime(value))} IST',
+                  style: TextStyle(
+                    color: AppColors.navyAlpha(0.6),
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ],

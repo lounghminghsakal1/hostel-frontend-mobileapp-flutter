@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import '../../../../core/widgets/listing_filters.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,16 +25,18 @@ class AttendanceRecordsView extends ConsumerStatefulWidget {
   final List<Widget> leading;
 
   @override
-  ConsumerState<AttendanceRecordsView> createState() => _AttendanceRecordsViewState();
+  ConsumerState<AttendanceRecordsView> createState() =>
+      _AttendanceRecordsViewState();
 }
 
 class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
   AttendanceStatusFilter _status = AttendanceStatusFilter.present;
 
   /// Single-day filter; ignored while [_range] is set.
-  DateTime _date = DateUtils.dateOnly(DateTime.now());
+  DateTime _date = DateUtils.dateOnly(indiaWallTime(DateTime.now()));
   DateTimeRange? _range;
   int _page = 1;
+  Map<String, String> _filters = {};
 
   AttendanceQuery get _query => (
     date: _range == null ? toIsoDate(_date) : null,
@@ -39,18 +45,32 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
     status: _status,
     page: _page,
     pageSize: _pageSize,
+    filters: jsonEncode(
+      Map.of(_filters)..removeWhere(
+        (key, value) =>
+            _status == AttendanceStatusFilter.absent &&
+            (key == 'by_face_matching_percentage' ||
+                key == 'face_matching_operator'),
+      ),
+    ),
   );
 
   String get _dateLabel {
-    if (_range != null) return '${toDisplayDate(_range!.start)} – ${toDisplayDate(_range!.end)}';
-    return DateUtils.isSameDay(_date, DateTime.now()) ? 'Today · ${toDisplayDate(_date)}' : toDisplayDate(_date);
+    if (_range != null) {
+      return '${toDisplayDate(_range!.start)} – ${toDisplayDate(_range!.end)}';
+    }
+    return DateUtils.isSameDay(_date, indiaWallTime(DateTime.now()))
+        ? 'Today · ${toDisplayDate(_date)}'
+        : toDisplayDate(_date);
   }
 
   Future<void> _chooseDateFilter() async {
     final choice = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -67,7 +87,10 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
               onTap: () => Navigator.of(context).pop('date'),
             ),
             ListTile(
-              leading: const Icon(Icons.date_range_rounded, color: AppColors.navy),
+              leading: const Icon(
+                Icons.date_range_rounded,
+                color: AppColors.navy,
+              ),
               title: const Text('Pick a date range'),
               onTap: () => Navigator.of(context).pop('range'),
             ),
@@ -78,7 +101,7 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
     );
     if (!mounted || choice == null) return;
 
-    final today = DateUtils.dateOnly(DateTime.now());
+    final today = DateUtils.dateOnly(indiaWallTime(DateTime.now()));
     final firstDate = DateTime(today.year - 2);
     switch (choice) {
       case 'today':
@@ -132,7 +155,8 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
           ...widget.leading,
           Text(
             'Attendance Records',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.md),
           SegmentedButton<AttendanceStatusFilter>(
@@ -166,7 +190,9 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
             icon: const Icon(Icons.calendar_month_rounded, size: 18),
             label: Row(
               children: [
-                Expanded(child: Text(_dateLabel, overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Text(_dateLabel, overflow: TextOverflow.ellipsis),
+                ),
                 const Icon(Icons.expand_more_rounded, size: 20),
               ],
             ),
@@ -174,20 +200,51 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
               foregroundColor: AppColors.navy,
               side: BorderSide(color: AppColors.navyAlpha(0.18)),
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+          ),
+          ListingFilters(
+            fields: [
+              ...attendanceFilters,
+              if (_status == AttendanceStatusFilter.present) ...[
+                const ListingFilter(
+                  'by_face_matching_percentage',
+                  'Face match threshold (%)',
+                  percentage: true,
+                ),
+                const ListingFilter(
+                  'face_matching_operator',
+                  'Threshold comparison',
+                  options: {'lte': 'At most (<=)', 'gte': 'At least (>=)'},
+                ),
+              ],
+            ],
+            onChanged: (filters) => setState(() {
+              _filters = filters;
+              _page = 1;
+            }),
           ),
           const SizedBox(height: 18),
           ...resultAsync.when(
             loading: () => const [
               Padding(
                 padding: EdgeInsets.only(top: 80),
-                child: Center(child: CircularProgressIndicator(color: AppColors.navy)),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.navy),
+                ),
               ),
             ],
             error: (error, _) => [
-              _ErrorState(message: error.toString(), onRetry: () => ref.invalidate(attendanceRecordsProvider(query))),
+              _ErrorState(
+                message: error.toString(),
+                onRetry: () => ref.invalidate(attendanceRecordsProvider(query)),
+              ),
             ],
             data: (result) => _content(result),
           ),
@@ -199,14 +256,18 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
   List<Widget> _content(AttendanceRecordsResult result) {
     final isRange = _range != null;
     final isAbsent = _status == AttendanceStatusFilter.absent;
-    final isEmpty = isAbsent ? result.absentRecords.isEmpty : result.presentRecords.isEmpty;
+    final isEmpty = isAbsent
+        ? result.absentRecords.isEmpty
+        : result.presentRecords.isEmpty;
 
     return [
       Row(
         children: [
           Expanded(
             child: StatCard(
-              label: 'Total Students',
+              label: _filters.keys.any((key) => !key.contains('face_matching'))
+                  ? 'Matching students'
+                  : 'Total Students',
               value: '${result.summary.totalStudents}',
               icon: Icons.groups_2_outlined,
             ),
@@ -214,27 +275,37 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
           const SizedBox(width: 12),
           Expanded(
             child: StatCard(
-              label: 'Marked Present',
+              label:
+                  (_status == AttendanceStatusFilter.present &&
+                      _filters.containsKey('by_face_matching_percentage'))
+                  ? 'Matching present'
+                  : 'Marked Present',
               value: '${result.summary.presentCount}',
               icon: Icons.check_circle_outline_rounded,
               filled: true,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: StatCard(
-              // Over a range this counts students absent on every day.
-              label: isRange ? 'Absent All Days' : 'Absent',
-              value: '${result.summary.absentCount}',
-              icon: Icons.person_off_outlined,
+          if (!(_status == AttendanceStatusFilter.present &&
+              _filters.containsKey('by_face_matching_percentage'))) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatCard(
+                // Over a range this counts students absent on every day.
+                label: isRange ? 'Absent All Days' : 'Absent',
+                value: '${result.summary.absentCount}',
+                icon: Icons.person_off_outlined,
+              ),
             ),
-          ),
+          ],
         ],
       ),
       const SizedBox(height: AppSpacing.xxl),
       Text(
-        isAbsent ? (isRange ? 'Students absent at least one day' : 'Absent students') : 'Attendance marked students',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        isAbsent
+            ? (isRange ? 'Students absent at least one day' : 'Absent students')
+            : 'Attendance marked students',
+        style: Theme.of(context).textTheme.titleMedium
+            ?.copyWith(fontWeight: FontWeight.w700),
       ),
       const SizedBox(height: AppSpacing.md),
       AnimatedSwitcher(
@@ -242,7 +313,9 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
         child: isEmpty
             ? AppEmptyState(
                 key: ValueKey('empty-$isAbsent'),
-                icon: isAbsent ? Icons.person_off_outlined : Icons.how_to_reg_rounded,
+                icon: isAbsent
+                    ? Icons.person_off_outlined
+                    : Icons.how_to_reg_rounded,
                 title: isAbsent ? 'No absent students' : 'No attendance marked',
                 message: isAbsent
                     ? 'No absent students for this period.'
@@ -252,7 +325,10 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
                 key: ValueKey('records-$isAbsent-$_page'),
                 child: isAbsent
                     ? AbsentRecordsTable(records: result.absentRecords)
-                    : PresentRecordsTable(records: result.presentRecords, showDate: isRange),
+                    : PresentRecordsTable(
+                        records: result.presentRecords,
+                        showDate: isRange,
+                      ),
               ),
       ),
       if (result.pagination.totalPages > 1) ...[
@@ -268,7 +344,11 @@ class _AttendanceRecordsViewState extends ConsumerState<AttendanceRecordsView> {
 }
 
 class _Pager extends StatelessWidget {
-  const _Pager({required this.page, required this.totalPages, required this.onPageChanged});
+  const _Pager({
+    required this.page,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
 
   final int page;
   final int totalPages;
@@ -288,7 +368,11 @@ class _Pager extends StatelessWidget {
           child: Text(
             'Page $page of $totalPages',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.navyAlpha(0.65), fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: AppColors.navyAlpha(0.65),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         IconButton(
@@ -314,7 +398,11 @@ class _ErrorState extends StatelessWidget {
       padding: const EdgeInsets.only(top: 60),
       child: Column(
         children: [
-          Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
+          Icon(
+            Icons.wifi_off_rounded,
+            color: AppColors.navyAlpha(0.4),
+            size: 40,
+          ),
           const SizedBox(height: 14),
           Text(
             message,

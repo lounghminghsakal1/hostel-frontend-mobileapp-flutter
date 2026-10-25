@@ -1,3 +1,5 @@
+import '../../../../core/utils/date_format.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -48,7 +50,11 @@ class EventDetailScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
+                Icon(
+                  Icons.wifi_off_rounded,
+                  color: AppColors.navyAlpha(0.4),
+                  size: 40,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   error.toString(),
@@ -57,7 +63,8 @@ class EventDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 TextButton(
-                  onPressed: () => ref.invalidate(upcomingEventDetailProvider(eventId)),
+                  onPressed: () =>
+                      ref.invalidate(upcomingEventDetailProvider(eventId)),
                   child: const Text('Try again'),
                 ),
               ],
@@ -66,7 +73,8 @@ class EventDetailScreen extends ConsumerWidget {
         ),
         data: (event) => RefreshIndicator(
           color: AppColors.navy,
-          onRefresh: () => ref.refresh(upcomingEventDetailProvider(eventId).future),
+          onRefresh: () =>
+              ref.refresh(upcomingEventDetailProvider(eventId).future),
           child: _EventDetails(event: event),
         ),
       ),
@@ -88,7 +96,10 @@ class _EventDetails extends StatelessWidget {
     }
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open this link'), behavior: SnackBarBehavior.floating),
+        const SnackBar(
+          content: Text('Could not open this link'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
@@ -102,31 +113,41 @@ class _EventDetails extends StatelessWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.xs, AppSpacing.xl, AppSpacing.xxxl),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xs,
+        AppSpacing.xl,
+        AppSpacing.xxxl,
+      ),
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                EventImage(event: event, iconSize: 48),
-                Positioned(top: AppSpacing.md, left: AppSpacing.md, child: EventStateBadge(event: event)),
-                Positioned(
-                  top: AppSpacing.md,
-                  right: AppSpacing.md,
-                  child: EventDateBadge(date: event.startingAt),
-                ),
-              ],
+        if (event.eventImageKey != null || event.eventImageUrl != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  EventImage(event: event, iconSize: 48),
+                  Positioned(
+                    top: AppSpacing.md,
+                    left: AppSpacing.md,
+                    child: EventStateBadge(event: event),
+                  ),
+                  Positioned(
+                    top: AppSpacing.md,
+                    right: AppSpacing.md,
+                    child: EventDateBadge(
+                      date: indiaWallTime(event.startingAt),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
         const SizedBox(height: AppSpacing.xl),
-        Text(
-          event.eventName,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
+        EventStateBadge(event: event),
+        Text(event.eventName, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: AppSpacing.md),
         _InfoTile(
           icon: Icons.schedule_rounded,
@@ -139,7 +160,9 @@ class _EventDetails extends StatelessWidget {
             label: 'Contact',
             value: [?contactName, ?contactPhone].join(' · '),
             actionIcon: contactPhone == null ? null : Icons.call_outlined,
-            onAction: contactPhone == null ? null : () => _open(context, Uri(scheme: 'tel', path: contactPhone)),
+            onAction: contactPhone == null
+                ? null
+                : () => _open(context, Uri(scheme: 'tel', path: contactPhone)),
           ),
         if (linkUri != null)
           _InfoTile(
@@ -209,7 +232,10 @@ class _InfoTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label, style: Theme.of(context).textTheme.labelSmall),
+                      Text(
+                        label,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         value,
@@ -220,7 +246,8 @@ class _InfoTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (actionIcon != null) Icon(actionIcon, size: 20, color: AppColors.navyAlpha(0.6)),
+                if (actionIcon != null)
+                  Icon(actionIcon, size: 20, color: AppColors.navyAlpha(0.6)),
               ],
             ),
           ),

@@ -28,7 +28,10 @@ class LeaveApplicationsRepository {
 
   Future<List<LeaveApplicationModel>> _getList(String endpoint) async {
     try {
-      final response = await _dio.get(endpoint);
+      final response = await _dio.get(
+        endpoint,
+        queryParameters: {'page': '1', 'pageSize': '20'},
+      );
       final data = _unwrap(response.data, 'Failed to load leave applications');
       final list = switch (data) {
         List<dynamic> l => l,
@@ -48,9 +51,13 @@ class LeaveApplicationsRepository {
   Future<LeaveApplicationModel> _getOne(String endpoint) async {
     try {
       final response = await _dio.get(endpoint);
-      final data = _unwrap(response.data, 'Failed to load the leave application');
+      final data = _unwrap(
+        response.data,
+        'Failed to load the leave application',
+      );
       final json = switch (data) {
-        Map<String, dynamic> m when m['leaveApplication'] is Map<String, dynamic> =>
+        Map<String, dynamic> m
+            when m['leaveApplication'] is Map<String, dynamic> =>
           m['leaveApplication'] as Map<String, dynamic>,
         Map<String, dynamic> m => m,
         _ => throw ApiException('Leave application response was malformed'),
@@ -90,6 +97,10 @@ class LeaveApplicationsRepository {
     DateTime? fromDate,
     DateTime? toDate,
   }) async {
+    if ((fromDate == null) != (toDate == null) ||
+        (fromDate != null && toDate!.isBefore(fromDate))) {
+      throw ApiException('Provide both leave dates in the correct order');
+    }
     try {
       final response = await _dio.patch(
         ApiEndpoints.leaveApplicationById(id),
@@ -108,7 +119,9 @@ class LeaveApplicationsRepository {
   /// Student only.
   Future<void> cancelLeaveApplication(int id) async {
     try {
-      final response = await _dio.patch(ApiEndpoints.cancelLeaveApplication(id));
+      final response = await _dio.patch(
+        ApiEndpoints.cancelLeaveApplication(id),
+      );
       _unwrap(response.data, 'Failed to cancel the leave application');
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
@@ -122,7 +135,13 @@ class LeaveApplicationsRepository {
     required LeaveStatus decision,
     String? rejectionReason,
   }) async {
-    assert(decision == LeaveStatus.approved || decision == LeaveStatus.rejected);
+    if (decision != LeaveStatus.approved && decision != LeaveStatus.rejected) {
+      throw ApiException('Invalid review decision');
+    }
+    if (decision == LeaveStatus.rejected &&
+        (rejectionReason?.trim().isEmpty ?? true)) {
+      throw ApiException('A rejection reason is required');
+    }
     try {
       final response = await _dio.patch(
         ApiEndpoints.reviewLeaveApplication(id),
@@ -144,6 +163,8 @@ class LeaveApplicationsRepository {
     if (status != null && status != 'success') {
       throw ApiException(responseData['message'] as String? ?? fallbackMessage);
     }
-    return responseData.containsKey('data') ? responseData['data'] : responseData;
+    return responseData.containsKey('data')
+        ? responseData['data']
+        : responseData;
   }
 }

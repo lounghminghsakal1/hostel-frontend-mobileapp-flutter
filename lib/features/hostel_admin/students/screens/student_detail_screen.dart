@@ -1,3 +1,6 @@
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/widgets/student_business_details.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,7 +44,11 @@ class StudentDetailScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
+                Icon(
+                  Icons.wifi_off_rounded,
+                  color: AppColors.navyAlpha(0.4),
+                  size: 40,
+                ),
                 const SizedBox(height: 14),
                 Text(
                   error.toString(),
@@ -50,14 +57,29 @@ class StudentDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () => ref.invalidate(studentDetailProvider(studentId)),
+                  onPressed: () =>
+                      ref.invalidate(studentDetailProvider(studentId)),
                   child: const Text('Try again'),
                 ),
               ],
             ),
           ),
         ),
-        data: (student) => _StudentEditForm(student: student),
+        data: (student) => Column(
+          children: [
+            if (student.status != null && student.status != 'ACTIVE')
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('Only active student profiles can be edited.'),
+              ),
+            Expanded(
+              child: AbsorbPointer(
+                absorbing: student.status != null && student.status != 'ACTIVE',
+                child: _StudentEditForm(student: student),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -65,6 +87,7 @@ class StudentDetailScreen extends ConsumerWidget {
 
 typedef _StudentValues = ({
   String studentName,
+  String rollNumber,
   String contactNumber,
   String parentMobileNumber,
   int? departmentId,
@@ -83,9 +106,19 @@ class _StudentEditForm extends ConsumerStatefulWidget {
 
 class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
   final _formKey = GlobalKey<FormState>();
-  late final _nameController = TextEditingController(text: widget.student.studentName);
-  late final _contactController = TextEditingController(text: widget.student.contactNumber);
-  late final _parentContactController = TextEditingController(text: widget.student.parentMobileNumber);
+  Map<String, String> _fieldErrors = {};
+  late final _rollController = TextEditingController(
+    text: widget.student.rollNumber,
+  );
+  late final _nameController = TextEditingController(
+    text: widget.student.studentName,
+  );
+  late final _contactController = TextEditingController(
+    text: widget.student.contactNumber,
+  );
+  late final _parentContactController = TextEditingController(
+    text: widget.student.parentMobileNumber,
+  );
   late int? _departmentId = widget.student.departmentId;
   late int? _roomId = widget.student.roomId;
 
@@ -109,6 +142,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
 
   @override
   void dispose() {
+    _rollController.dispose();
     _nameController.dispose();
     _contactController.dispose();
     _parentContactController.dispose();
@@ -138,7 +172,9 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
       _isUploadingPhoto = true;
     });
     try {
-      final key = await ref.read(studentsRepositoryProvider).uploadStudentImage(path);
+      final key = await ref
+          .read(studentsRepositoryProvider)
+          .uploadStudentImage(path);
       if (!mounted) return;
       setState(() {
         _uploadedImageKey = key;
@@ -157,6 +193,11 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
 
   Future<void> _save({String successMessage = 'Student details saved'}) async {
     if (_isSaving) return;
+    if (widget.student.status != null && widget.student.status != 'ACTIVE') {
+      _showMessage('Only active student profiles can be edited');
+      return;
+    }
+    setState(() => _fieldErrors = {});
     if (!(_formKey.currentState?.validate() ?? false)) {
       _showMessage(
         _uploadedImageKey != null
@@ -170,39 +211,100 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
     final saved = _savedValues;
     T? changed<T>(T value, T savedValue) => value == savedValue ? null : value;
 
+    final roll = changed(current.rollNumber, saved.rollNumber);
     final name = changed(current.studentName, saved.studentName);
     final contact = changed(current.contactNumber, saved.contactNumber);
-    final parentContact = changed(current.parentMobileNumber, saved.parentMobileNumber);
+    final parentContact = changed(
+      current.parentMobileNumber,
+      saved.parentMobileNumber,
+    );
     final departmentId = changed(current.departmentId, saved.departmentId);
     final imageKey = changed(current.studentImageKey, saved.studentImageKey);
     final roomId = changed(current.roomId, saved.roomId);
 
-    if ([name, contact, parentContact, departmentId, imageKey, roomId].every((v) => v == null)) {
+    if ([
+      roll,
+      name,
+      contact,
+      parentContact,
+      departmentId,
+      imageKey,
+      roomId,
+    ].every((v) => v == null)) {
       _showMessage('No changes to save');
       return;
     }
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(studentsRepositoryProvider).updateStudent(
+      await ref
+          .read(studentsRepositoryProvider)
+          .updateStudent(
             id: widget.student.id,
             studentName: name,
+            rollNumber: roll,
             contactNumber: contact,
             parentMobileNumber: parentContact,
             departmentId: departmentId,
             studentImageKey: imageKey,
             roomId: roomId,
           );
+      final confirmed = await ref
+          .read(studentsRepositoryProvider)
+          .getStudent(widget.student.id);
       if (!mounted) return;
+      final rollSaved = roll == null || confirmed.rollNumber == roll;
+      final phonesSaved =
+          (contact == null || confirmed.contactNumber == contact) &&
+          (parentContact == null ||
+              confirmed.parentMobileNumber == parentContact);
       setState(() {
         _isSaving = false;
-        _savedValues = current;
+        _rollController.text = confirmed.rollNumber;
+        _nameController.text = confirmed.studentName;
+        _contactController.text = confirmed.contactNumber;
+        _parentContactController.text = confirmed.parentMobileNumber;
+        _departmentId = confirmed.departmentId;
+        _roomId = confirmed.roomId;
+        _savedValues = (
+          studentName: confirmed.studentName,
+          rollNumber: confirmed.rollNumber,
+          contactNumber: confirmed.contactNumber,
+          parentMobileNumber: confirmed.parentMobileNumber,
+          departmentId: confirmed.departmentId,
+          roomId: confirmed.roomId,
+          studentImageKey: confirmed.studentImageKey,
+        );
       });
+      ref.invalidate(studentDetailProvider(widget.student.id));
+      if (!rollSaved) {
+        _showMessage(
+          'Roll number was not saved by the backend. Other returned details have been refreshed.',
+        );
+        return;
+      }
+      if (!phonesSaved) {
+        _showMessage(
+          'Phone changes were not confirmed by the backend. The displayed details have been refreshed.',
+        );
+        return;
+      }
       ref.invalidate(studentsListProvider);
       _showMessage(successMessage);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isSaving = false);
+      setState(() {
+        _isSaving = false;
+        if (e is ApiException) _fieldErrors = e.errors;
+        if (e is ApiException && e.statusCode == 409 && _fieldErrors.isEmpty) {
+          if (e.message.toLowerCase().contains('roll')) {
+            _fieldErrors = {'rollNumber': e.message};
+          } else if (e.message.toLowerCase().contains('contact') ||
+              e.message.toLowerCase().contains('phone')) {
+            _fieldErrors = {'contactNumber': e.message};
+          }
+        }
+      });
       _showMessage(e.toString());
     }
   }
@@ -210,6 +312,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
   _StudentValues _currentValues() {
     return (
       studentName: _nameController.text.trim(),
+      rollNumber: _rollController.text.trim(),
       contactNumber: _contactController.text.trim(),
       parentMobileNumber: _parentContactController.text.trim(),
       departmentId: _departmentId,
@@ -228,7 +331,9 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
       (value == null || value.trim().isEmpty) ? 'Required' : null;
 
   static String? _phone(String? value) =>
-      (value?.trim().length ?? 0) == 10 ? null : 'Enter a 10-digit number';
+      RegExp(r'^\d{10}$').hasMatch(value?.trim() ?? '')
+      ? null
+      : 'Enter a 10-digit number';
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +401,21 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
             ],
           ),
           const SizedBox(height: 28),
+          StudentBusinessDetails(student: widget.student, resolveLabels: true),
+          const SizedBox(height: 12),
           const SectionHeader(title: 'Details'),
+          const SizedBox(height: 14),
+          AppTextField(
+            label: 'Roll number',
+            icon: Icons.badge_outlined,
+            controller: _rollController,
+            validator: _required,
+            errorText: _fieldErrors['rollNumber'],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Roll number saving requires backend support. The saved value will be checked after each update.',
+          ),
           const SizedBox(height: 14),
           AppTextField(
             label: 'Student name',
@@ -310,6 +429,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
             icon: Icons.phone_outlined,
             keyboardType: TextInputType.phone,
             controller: _contactController,
+            errorText: _fieldErrors['contactNumber'],
             inputFormatters: digitsOnly,
             maxLength: 10,
             validator: _phone,
@@ -320,6 +440,7 @@ class _StudentEditFormState extends ConsumerState<_StudentEditForm> {
             icon: Icons.family_restroom_rounded,
             keyboardType: TextInputType.phone,
             controller: _parentContactController,
+            errorText: _fieldErrors['parentMobileNumber'],
             inputFormatters: digitsOnly,
             maxLength: 10,
             validator: _phone,

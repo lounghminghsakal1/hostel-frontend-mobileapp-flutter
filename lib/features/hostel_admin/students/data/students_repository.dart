@@ -14,14 +14,20 @@ class StudentsRepository {
 
   Future<List<StudentModel>> getStudents() async {
     try {
-      final response = await _dio.get(ApiEndpoints.students);
+      final response = await _dio.get(
+        ApiEndpoints.students,
+        queryParameters: {'page': '1', 'pageSize': '20'},
+      );
       final data = _unwrap(response.data, 'Failed to load students');
       final list = switch (data) {
         List<dynamic> l => l,
-        Map<String, dynamic> m when m['students'] is List => m['students'] as List<dynamic>,
+        Map<String, dynamic> m when m['students'] is List =>
+          m['students'] as List<dynamic>,
         _ => throw ApiException('Students response was malformed'),
       };
-      return list.map((s) => StudentModel.fromJson(s as Map<String, dynamic>)).toList();
+      return list
+          .map((s) => StudentModel.fromJson(s as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
@@ -30,7 +36,9 @@ class StudentsRepository {
   Future<StudentModel> getStudent(int id) async {
     try {
       final response = await _dio.get(ApiEndpoints.studentById(id));
-      return StudentModel.fromJson(_studentObject(_unwrap(response.data, 'Failed to load student')));
+      return StudentModel.fromJson(
+        _studentObject(_unwrap(response.data, 'Failed to load student')),
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
@@ -40,6 +48,7 @@ class StudentsRepository {
   Future<void> updateStudent({
     required int id,
     String? studentName,
+    String? rollNumber,
     String? contactNumber,
     String? parentMobileNumber,
     int? departmentId,
@@ -51,6 +60,7 @@ class StudentsRepository {
         ApiEndpoints.studentById(id),
         data: {
           'studentName': ?studentName,
+          'rollNumber': ?rollNumber,
           'contactNumber': ?contactNumber,
           'parentMobileNumber': ?parentMobileNumber,
           'departmentId': ?departmentId,
@@ -64,10 +74,14 @@ class StudentsRepository {
     }
   }
 
-  Future<List<SelectOption>> getDepartments() =>
-      _getOptions(ApiEndpoints.departments, 'departments', SelectOption.department);
+  Future<List<SelectOption>> getDepartments() => _getOptions(
+    ApiEndpoints.departments,
+    'departments',
+    SelectOption.department,
+  );
 
-  Future<List<SelectOption>> getRooms() => _getOptions(ApiEndpoints.rooms, 'rooms', SelectOption.room);
+  Future<List<SelectOption>> getRooms() =>
+      _getOptions(ApiEndpoints.rooms, 'rooms', SelectOption.room);
 
   /// Loads a list endpoint that returns either a bare array or one wrapped
   /// under `data` / `data.<listKey>`.
@@ -77,14 +91,33 @@ class StudentsRepository {
     SelectOption Function(Map<String, dynamic>) parse,
   ) async {
     try {
-      final response = await _dio.get(endpoint);
-      final data = _unwrap(response.data, 'Failed to load $listKey');
-      final list = switch (data) {
-        List<dynamic> l => l,
-        Map<String, dynamic> m when m[listKey] is List => m[listKey] as List<dynamic>,
-        _ => throw ApiException('The $listKey response was malformed'),
-      };
-      return list.map((item) => parse(item as Map<String, dynamic>)).toList();
+      final collected = <SelectOption>[];
+      var page = 1;
+      while (true) {
+        final response = await _dio.get(
+          endpoint,
+          queryParameters: {'page': '$page', 'pageSize': '20'},
+        );
+        final data = _unwrap(response.data, 'Failed to load $listKey');
+        final list = switch (data) {
+          List<dynamic> l => l,
+          Map<String, dynamic> m when m[listKey] is List =>
+            m[listKey] as List<dynamic>,
+          _ => throw ApiException('The $listKey response was malformed'),
+        };
+        collected.addAll(
+          list.map((item) => parse(item as Map<String, dynamic>)),
+        );
+        final body = response.data;
+        final meta = body is Map ? body['meta'] : null;
+        final totalPages = meta is Map
+            ? (meta['totalPages'] as num?)?.toInt() ?? 1
+            : 1;
+        if (endpoint != ApiEndpoints.rooms || page >= totalPages) {
+          return collected;
+        }
+        page++;
+      }
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
@@ -123,10 +156,7 @@ class StudentsRepository {
   /// Uploads a profile photo directly to S3 and returns its object key, to be
   /// sent as `studentImageKey` in [createStudent] or [updateStudent].
   Future<String> uploadStudentImage(String imagePath) {
-    return _s3.uploadJpeg(
-      mediaFor: MediaFor.studentImage,
-      filePath: imagePath,
-    );
+    return _s3.uploadJpeg(mediaFor: MediaFor.studentImage, filePath: imagePath);
   }
 
   /// Returns the `data` payload, throwing if the envelope reports a failure.
@@ -136,12 +166,15 @@ class StudentsRepository {
     if (status != null && status != 'success') {
       throw ApiException(responseData['message'] as String? ?? fallbackMessage);
     }
-    return responseData.containsKey('data') ? responseData['data'] : responseData;
+    return responseData.containsKey('data')
+        ? responseData['data']
+        : responseData;
   }
 
   Map<String, dynamic> _studentObject(Object? data) => switch (data) {
-        Map<String, dynamic> m when m['student'] is Map<String, dynamic> => m['student'] as Map<String, dynamic>,
-        Map<String, dynamic> m => m,
-        _ => throw ApiException('Student response was malformed'),
-      };
+    Map<String, dynamic> m when m['student'] is Map<String, dynamic> =>
+      m['student'] as Map<String, dynamic>,
+    Map<String, dynamic> m => m,
+    _ => throw ApiException('Student response was malformed'),
+  };
 }

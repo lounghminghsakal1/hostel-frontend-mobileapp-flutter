@@ -32,15 +32,22 @@ class _LeaveApplicationFormSheet extends ConsumerStatefulWidget {
   final LeaveApplicationModel? application;
 
   @override
-  ConsumerState<_LeaveApplicationFormSheet> createState() => _LeaveApplicationFormSheetState();
+  ConsumerState<_LeaveApplicationFormSheet> createState() =>
+      _LeaveApplicationFormSheetState();
 }
 
-class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFormSheet> {
+class _LeaveApplicationFormSheetState
+    extends ConsumerState<_LeaveApplicationFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final _reasonController = TextEditingController(text: widget.application?.leaveReason);
+  late final _reasonController = TextEditingController(
+    text: widget.application?.leaveReason,
+  );
   late DateTimeRange? _range = widget.application == null
       ? null
-      : DateTimeRange(start: widget.application!.fromDate, end: widget.application!.toDate);
+      : DateTimeRange(
+          start: widget.application!.fromDate,
+          end: widget.application!.toDate,
+        );
   bool _isSaving = false;
 
   /// Shown above the submit button; a SnackBar would sit behind the sheet.
@@ -58,7 +65,9 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
     final today = DateUtils.dateOnly(DateTime.now());
     final existingStart = widget.application?.fromDate;
     // When editing a leave that already started, keep its start selectable.
-    final firstDate = existingStart != null && existingStart.isBefore(today) ? existingStart : today;
+    final firstDate = existingStart != null && existingStart.isBefore(today)
+        ? existingStart
+        : today;
     final picked = await showDateRangePicker(
       context: context,
       firstDate: firstDate,
@@ -100,8 +109,13 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
       } else {
         // Only send the fields that actually changed.
         final changedReason = reason == application.leaveReason ? null : reason;
-        final changedFrom = DateUtils.isSameDay(range.start, application.fromDate) ? null : range.start;
-        final changedTo = DateUtils.isSameDay(range.end, application.toDate) ? null : range.end;
+        final changedFrom =
+            DateUtils.isSameDay(range.start, application.fromDate)
+            ? null
+            : range.start;
+        final changedTo = DateUtils.isSameDay(range.end, application.toDate)
+            ? null
+            : range.end;
         if (changedReason == null && changedFrom == null && changedTo == null) {
           if (mounted) Navigator.of(context).pop(false);
           return;
@@ -109,8 +123,10 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
         await repository.updateLeaveApplication(
           id: application.id,
           leaveReason: changedReason,
-          fromDate: changedFrom,
-          toDate: changedTo,
+          fromDate: changedFrom != null || changedTo != null
+              ? range.start
+              : null,
+          toDate: changedFrom != null || changedTo != null ? range.end : null,
         );
       }
       if (!mounted) return;
@@ -127,7 +143,9 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
   @override
   Widget build(BuildContext context) {
     final range = _range;
-    final days = range == null ? 0 : range.end.difference(range.start).inDays + 1;
+    final days = range == null
+        ? 0
+        : range.end.difference(range.start).inDays + 1;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -158,10 +176,8 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                 const SizedBox(height: AppSpacing.xl),
                 Text(
                   _isEditing ? 'Edit Leave Application' : 'Apply for Leave',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 18,
-                        color: AppColors.navy,
-                      ),
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(fontSize: 18, color: AppColors.navy),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Material(
@@ -177,7 +193,11 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.date_range_rounded, color: AppColors.navyAlpha(0.6), size: 20),
+                          Icon(
+                            Icons.date_range_rounded,
+                            color: AppColors.navyAlpha(0.6),
+                            size: 20,
+                          ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: Column(
@@ -185,7 +205,10 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                               children: [
                                 Text(
                                   'Leave dates',
-                                  style: TextStyle(color: AppColors.navyAlpha(0.65), fontSize: 12),
+                                  style: TextStyle(
+                                    color: AppColors.navyAlpha(0.65),
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
@@ -193,7 +216,9 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                                       ? 'Tap to select'
                                       : '${toDisplayDate(range.start)} – ${toDisplayDate(range.end)}',
                                   style: TextStyle(
-                                    color: range == null ? AppColors.navyAlpha(0.45) : AppColors.navy,
+                                    color: range == null
+                                        ? AppColors.navyAlpha(0.45)
+                                        : AppColors.navy,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -223,8 +248,9 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                   maxLength: 500,
                   textCapitalization: TextCapitalization.sentences,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (value) =>
-                      (value == null || value.trim().isEmpty) ? 'Tell us why you need leave' : null,
+                  validator: (value) => (value == null || value.trim().isEmpty)
+                      ? 'Tell us why you need leave'
+                      : null,
                   style: const TextStyle(
                     color: AppColors.navy,
                     fontSize: 15,
@@ -241,12 +267,19 @@ class _LeaveApplicationFormSheetState extends ConsumerState<_LeaveApplicationFor
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.error_outline_rounded, color: AppColors.error, size: 16),
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: AppColors.error,
+                        size: 16,
+                      ),
                       const SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
                           _error!,
-                          style: TextStyle(color: AppColors.error, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],

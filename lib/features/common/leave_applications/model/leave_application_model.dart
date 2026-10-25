@@ -1,3 +1,5 @@
+import '../../../hostel_admin/students/model/student_model.dart';
+
 enum LeaveStatus {
   pending('Pending'),
   approved('Approved'),
@@ -10,9 +12,11 @@ enum LeaveStatus {
   final String label;
 
   /// The value the review endpoint expects (`APPROVED` / `REJECTED`).
-  String get apiValue => name.toUpperCase();
+  String get apiValue =>
+      this == pending ? 'WAITING_FOR_APPROVAL' : name.toUpperCase();
 
-  static LeaveStatus fromApi(Object? value) => switch (value?.toString().toUpperCase()) {
+  static LeaveStatus fromApi(Object? value) =>
+      switch (value?.toString().toUpperCase()) {
         'WAITING_FOR_APPROVAL' || 'PENDING' => pending,
         'APPROVED' => approved,
         'REJECTED' => rejected,
@@ -32,6 +36,7 @@ class LeaveApplicationModel {
     this.createdAt,
     this.reviewedAt,
     this.studentName,
+    this.student,
     this.rollNumber,
     this.roomNumber,
   });
@@ -49,6 +54,7 @@ class LeaveApplicationModel {
 
   /// Only filled for the admin, when the backend includes the student.
   final String? studentName;
+  final StudentModel? student;
   final String? rollNumber;
   final String? roomNumber;
 
@@ -71,6 +77,9 @@ class LeaveApplicationModel {
       rejectionReason: _nonEmpty(json['rejectionReason']),
       createdAt: _asTimestamp(json['createdAt']),
       reviewedAt: _asTimestamp(json['reviewedAt']),
+      student: student == null
+          ? null
+          : StudentModel.fromJson({'id': 0, ...student}),
       studentName: _nonEmpty(json['studentName'] ?? student?['studentName']),
       rollNumber: _nonEmpty(json['rollNumber'] ?? student?['rollNumber']),
       roomNumber: _nonEmpty(json['roomNumber'] ?? room?['roomNumber']),
@@ -78,7 +87,8 @@ class LeaveApplicationModel {
   }
 }
 
-Map<String, dynamic>? _map(Object? value) => value is Map<String, dynamic> ? value : null;
+Map<String, dynamic>? _map(Object? value) =>
+    value is Map<String, dynamic> ? value : null;
 
 String? _nonEmpty(Object? value) {
   final s = value?.toString().trim();
@@ -86,11 +96,11 @@ String? _nonEmpty(Object? value) {
 }
 
 int? _asInt(Object? value) => switch (value) {
-      int v => v,
-      num v => v.toInt(),
-      String v => int.tryParse(v),
-      _ => null,
-    };
+  int v => v,
+  num v => v.toInt(),
+  String v => int.tryParse(v),
+  _ => null,
+};
 
 /// Reads only the `yyyy-mm-dd` part of a date or ISO timestamp.
 DateTime? _asDate(Object? value) {

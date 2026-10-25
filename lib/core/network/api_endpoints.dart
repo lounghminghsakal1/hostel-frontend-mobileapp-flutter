@@ -20,6 +20,8 @@ class ApiEndpoints {
 
   static const String attendanceRecords = '/attendance_records';
 
+  static const String adminSplashScreen = '/hostel_admin/splash_screen';
+
   static const String adminDashboard = '/hostel-admin/dashboard';
 
   static const String students = '/students';

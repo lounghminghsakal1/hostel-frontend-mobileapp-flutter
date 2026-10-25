@@ -11,21 +11,30 @@ class RoomsRepository {
 
   Future<List<RoomModel>> getRooms() async {
     try {
-      final response = await _dio.get(ApiEndpoints.rooms);
+      final response = await _dio.get(
+        ApiEndpoints.rooms,
+        queryParameters: {'page': '1', 'pageSize': '20'},
+      );
       final data = _unwrap(response.data, 'Failed to load rooms');
       final list = switch (data) {
         List<dynamic> l => l,
-        Map<String, dynamic> m when m['rooms'] is List => m['rooms'] as List<dynamic>,
+        Map<String, dynamic> m when m['rooms'] is List =>
+          m['rooms'] as List<dynamic>,
         _ => throw ApiException('Rooms response was malformed'),
       };
-      return list.map((r) => RoomModel.fromJson(r as Map<String, dynamic>)).toList();
+      return list
+          .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
   }
 
   /// Admin only.
-  Future<void> createRoom({required String roomNumber, required int capacity}) async {
+  Future<void> createRoom({
+    required String roomNumber,
+    required int capacity,
+  }) async {
     try {
       final response = await _dio.post(
         ApiEndpoints.rooms,
@@ -39,14 +48,15 @@ class RoomsRepository {
 
   /// Admin only. Patches only the given fields; a null argument leaves that
   /// field as is.
-  Future<void> updateRoom({required int id, String? roomNumber, int? capacity}) async {
+  Future<void> updateRoom({
+    required int id,
+    String? roomNumber,
+    int? capacity,
+  }) async {
     try {
       final response = await _dio.patch(
         ApiEndpoints.roomById(id),
-        data: {
-          'roomNumber': ?roomNumber,
-          'capacity': ?capacity,
-        },
+        data: {'roomNumber': ?roomNumber, 'capacity': ?capacity},
       );
       _unwrap(response.data, 'Failed to update room');
     } on DioException catch (e) {
@@ -61,6 +71,8 @@ class RoomsRepository {
     if (status != null && status != 'success') {
       throw ApiException(responseData['message'] as String? ?? fallbackMessage);
     }
-    return responseData.containsKey('data') ? responseData['data'] : responseData;
+    return responseData.containsKey('data')
+        ? responseData['data']
+        : responseData;
   }
 }

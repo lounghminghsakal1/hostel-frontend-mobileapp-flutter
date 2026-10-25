@@ -1,3 +1,5 @@
+import '../../../../core/widgets/student_business_details.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -10,14 +12,17 @@ import 'leave_status_chip.dart';
 /// Scrollable full details of one application. With [showStudent] (admin),
 /// the header names the student; otherwise it leads with the dates.
 class LeaveApplicationDetails extends StatelessWidget {
-  const LeaveApplicationDetails({super.key, required this.application, this.showStudent = false});
+  const LeaveApplicationDetails({
+    super.key,
+    required this.application,
+    this.showStudent = false,
+  });
 
   final LeaveApplicationModel application;
   final bool showStudent;
 
   @override
   Widget build(BuildContext context) {
-    final createdAt = application.createdAt;
     final reviewedAt = application.reviewedAt;
     final rejectionReason = application.rejectionReason;
     final studentSubtitle = [
@@ -25,13 +30,22 @@ class LeaveApplicationDetails extends StatelessWidget {
       if (application.roomNumber != null) 'Room ${application.roomNumber}',
     ].join(' · ');
 
-    final title = showStudent ? (application.studentName ?? 'Student') : leaveDateRangeLabel(application);
-    final subtitle = showStudent ? studentSubtitle : leaveDaysLabel(application);
+    final title = showStudent
+        ? (application.studentName ?? 'Student')
+        : leaveDateRangeLabel(application);
+    final subtitle = showStudent
+        ? studentSubtitle
+        : leaveDaysLabel(application);
 
     final textTheme = Theme.of(context).textTheme;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.xxl),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.sm,
+        AppSpacing.xl,
+        AppSpacing.xxl,
+      ),
       children: [
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -48,7 +62,9 @@ class LeaveApplicationDetails extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Icon(
-                  showStudent ? Icons.person_outline_rounded : Icons.event_note_rounded,
+                  showStudent
+                      ? Icons.person_outline_rounded
+                      : Icons.event_note_rounded,
                   color: AppColors.white,
                   size: 22,
                 ),
@@ -58,7 +74,10 @@ class LeaveApplicationDetails extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: textTheme.titleMedium?.copyWith(fontSize: 16)),
+                    Text(
+                      title,
+                      style: textTheme.titleMedium?.copyWith(fontSize: 16),
+                    ),
                     if (subtitle.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(subtitle, style: textTheme.bodySmall),
@@ -75,26 +94,25 @@ class LeaveApplicationDetails extends StatelessWidget {
           _DetailRow(
             icon: Icons.date_range_rounded,
             label: 'Leave dates',
-            value: '${leaveDateRangeLabel(application)} · ${leaveDaysLabel(application)}',
+            value:
+                '${leaveDateRangeLabel(application)} · ${leaveDaysLabel(application)}',
           ),
-        if (createdAt != null)
-          _DetailRow(
-            icon: Icons.send_outlined,
-            label: 'Applied on',
-            value: toDisplayDate(createdAt),
-          ),
-        if (reviewedAt != null)
-          _DetailRow(
-            icon: Icons.fact_check_outlined,
-            label: 'Reviewed on',
-            value: toDisplayDate(reviewedAt),
-          ),
+        if (showStudent && application.student != null)
+          StudentBusinessDetails(student: application.student!),
+        _DetailRow(
+          icon: Icons.fact_check_outlined,
+          label: 'Reviewed at',
+          value: reviewedAt == null
+              ? '\u2014'
+              : instantToDisplay(reviewedAt.toIso8601String()),
+        ),
         _DetailRow(
           icon: Icons.notes_rounded,
           label: 'Reason',
           value: application.leaveReason,
         ),
-        if (rejectionReason != null && application.status == LeaveStatus.rejected)
+        if (rejectionReason != null &&
+            application.status == LeaveStatus.rejected)
           _DetailRow(
             icon: Icons.cancel_outlined,
             label: 'Reason for rejection',
@@ -137,7 +155,9 @@ class _DetailRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: textTheme.labelSmall?.copyWith(color: isNegative ? AppColors.error : null),
+                style: textTheme.labelSmall?.copyWith(
+                  color: isNegative ? AppColors.error : null,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -154,7 +174,10 @@ class _DetailRow extends StatelessWidget {
     );
 
     if (!isNegative) {
-      return Padding(padding: const EdgeInsets.only(bottom: AppSpacing.lg), child: content);
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+        child: content,
+      );
     }
 
     return Padding(

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_endpoints.dart';
+import '../../../../core/utils/date_format.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/s3_upload_service.dart';
 import '../model/upcoming_event_model.dart';
@@ -27,7 +28,10 @@ class UpcomingEventsRepository {
   /// Admin and student.
   Future<List<UpcomingEventModel>> getUpcomingEvents() async {
     try {
-      final response = await _dio.get(ApiEndpoints.upcomingEvents);
+      final response = await _dio.get(
+        ApiEndpoints.upcomingEvents,
+        queryParameters: {'is_active': 'false', 'page': '1', 'pageSize': '20'},
+      );
       final data = _unwrap(response.data, 'Failed to load upcoming events');
       final list = switch (data) {
         List<dynamic> l => l,
@@ -36,8 +40,13 @@ class UpcomingEventsRepository {
           m.values.firstWhere((v) => v is List) as List<dynamic>,
         _ => throw ApiException('Upcoming events response was malformed'),
       };
-      final events = list.map((e) => UpcomingEventModel.fromJson(e as Map<String, dynamic>)).toList()
-        ..sort((a, b) => a.startingAt.compareTo(b.startingAt));
+      final events =
+          list
+              .map(
+                (e) => UpcomingEventModel.fromJson(e as Map<String, dynamic>),
+              )
+              .toList()
+            ..sort((a, b) => a.startingAt.compareTo(b.startingAt));
       return events;
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
@@ -50,7 +59,8 @@ class UpcomingEventsRepository {
       final response = await _dio.get(ApiEndpoints.upcomingEventById(id));
       final data = _unwrap(response.data, 'Failed to load the event');
       final json = switch (data) {
-        Map<String, dynamic> m when m['upcomingEvent'] is Map<String, dynamic> =>
+        Map<String, dynamic> m
+            when m['upcomingEvent'] is Map<String, dynamic> =>
           m['upcomingEvent'] as Map<String, dynamic>,
         Map<String, dynamic> m => m,
         _ => throw ApiException('Event response was malformed'),
@@ -64,7 +74,10 @@ class UpcomingEventsRepository {
   /// Admin only. Name, description and both times are required.
   Future<void> createUpcomingEvent(UpcomingEventInput input) async {
     try {
-      final response = await _dio.post(ApiEndpoints.upcomingEvents, data: _toBody(input));
+      final response = await _dio.post(
+        ApiEndpoints.upcomingEvents,
+        data: _toBody(input),
+      );
       _unwrap(response.data, 'Failed to create the event');
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
@@ -74,7 +87,10 @@ class UpcomingEventsRepository {
   /// Admin only. Patches only the non-null fields of [input].
   Future<void> updateUpcomingEvent(int id, UpcomingEventInput input) async {
     try {
-      final response = await _dio.patch(ApiEndpoints.upcomingEventById(id), data: _toBody(input));
+      final response = await _dio.patch(
+        ApiEndpoints.upcomingEventById(id),
+        data: _toBody(input),
+      );
       _unwrap(response.data, 'Failed to update the event');
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
@@ -84,25 +100,26 @@ class UpcomingEventsRepository {
   /// Admin only. Uploads a banner directly to S3 and returns its object key,
   /// to be sent as `eventImageKey`.
   Future<String> uploadEventImage(String imagePath) {
-    return _s3.uploadJpeg(
-      mediaFor: MediaFor.eventImage,
-      filePath: imagePath,
-    );
+    return _s3.uploadJpeg(mediaFor: MediaFor.eventImage, filePath: imagePath);
   }
 
   /// Times go out as UTC ISO strings (`...Z`), which `z.string().datetime()`
   /// requires.
   Map<String, dynamic> _toBody(UpcomingEventInput input) => {
-        'eventName': ?input.eventName,
-        'eventDescription': ?input.eventDescription,
-        'startingAt': ?input.startingAt?.toUtc().toIso8601String(),
-        'endingAt': ?input.endingAt?.toUtc().toIso8601String(),
-        'eventImageKey': ?input.eventImageKey,
-        'eventLink': ?input.eventLink,
-        'contactPersonName': ?input.contactPersonName,
-        'contactPersonPhone': ?input.contactPersonPhone,
-        'isActive': ?input.isActive,
-      };
+    'eventName': ?input.eventName,
+    'eventDescription': ?input.eventDescription,
+    'startingAt': ?(input.startingAt == null
+        ? null
+        : toUtcInstant(input.startingAt!)),
+    'endingAt': ?(input.endingAt == null
+        ? null
+        : toUtcInstant(input.endingAt!)),
+    'eventImageKey': ?input.eventImageKey,
+    'eventLink': ?input.eventLink,
+    'contactPersonName': ?input.contactPersonName,
+    'contactPersonPhone': ?input.contactPersonPhone,
+    'isActive': ?input.isActive,
+  };
 
   /// Returns the `data` payload, throwing if the envelope reports a failure.
   Object? _unwrap(Object? responseData, String fallbackMessage) {
@@ -111,6 +128,8 @@ class UpcomingEventsRepository {
     if (status != null && status != 'success') {
       throw ApiException(responseData['message'] as String? ?? fallbackMessage);
     }
-    return responseData.containsKey('data') ? responseData['data'] : responseData;
+    return responseData.containsKey('data')
+        ? responseData['data']
+        : responseData;
   }
 }

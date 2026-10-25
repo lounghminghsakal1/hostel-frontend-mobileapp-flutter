@@ -18,6 +18,7 @@ class AppTextField extends StatefulWidget {
     this.onFieldSubmitted,
     this.autofillHints,
     this.enabled = true,
+    this.errorText,
   });
 
   final String label;
@@ -32,6 +33,7 @@ class AppTextField extends StatefulWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final Iterable<String>? autofillHints;
   final bool enabled;
+  final String? errorText;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -66,6 +68,7 @@ class _AppTextFieldState extends State<AppTextField> {
       ),
       decoration: InputDecoration(
         labelText: widget.label,
+        errorText: widget.errorText,
         counterText: '',
         prefixIcon: Icon(
           widget.icon,

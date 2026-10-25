@@ -7,6 +7,8 @@ class StudentModel {
     required this.parentMobileNumber,
     required this.departmentId,
     this.departmentName,
+    this.rollNumber = '',
+    this.status,
     this.roomId,
     this.roomNumber,
     this.studentImageKey,
@@ -14,6 +16,8 @@ class StudentModel {
   });
 
   final int id;
+  final String rollNumber;
+  final String? status;
   final String studentName;
   final String email;
   final String contactNumber;
@@ -28,7 +32,11 @@ class StudentModel {
   final String? studentImageUrl;
 
   String get initials {
-    final parts = studentName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = studentName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     final first = parts.first[0];
     final last = parts.length > 1 ? parts.last[0] : '';
@@ -40,23 +48,32 @@ class StudentModel {
     final room = json['room'];
     return StudentModel(
       id: _asInt(json['id'])!,
+      rollNumber: json['rollNumber']?.toString() ?? '',
+      status: json['status']?.toString(),
       studentName: json['studentName'] as String? ?? '',
       email: json['email'] as String? ?? '',
       contactNumber: json['contactNumber']?.toString() ?? '',
       parentMobileNumber: json['parentMobileNumber']?.toString() ?? '',
-      departmentId: _asInt(json['departmentId']) ?? (department is Map ? _asInt(department['id']) : null),
-      departmentName: department is Map ? (department['name'] ?? department['departmentName']) as String? : null,
-      roomId: _asInt(json['roomId']) ?? (room is Map ? _asInt(room['id']) : null),
-      roomNumber: room is Map ? (room['roomNumber'] ?? room['name'])?.toString() : null,
+      departmentId:
+          _asInt(json['departmentId']) ??
+          (department is Map ? _asInt(department['id']) : null),
+      departmentName: department is Map
+          ? (department['name'] ?? department['departmentName']) as String?
+          : null,
+      roomId:
+          _asInt(json['roomId']) ?? (room is Map ? _asInt(room['id']) : null),
+      roomNumber: room is Map
+          ? (room['roomNumber'] ?? room['name'])?.toString()
+          : null,
       studentImageKey: json['studentImageKey'] as String?,
       studentImageUrl: (json['studentImageUrl'] ?? json['imageUrl']) as String?,
     );
   }
 
   static int? _asInt(Object? value) => switch (value) {
-        int v => v,
-        num v => v.toInt(),
-        String v => int.tryParse(v),
-        _ => null,
-      };
+    int v => v,
+    num v => v.toInt(),
+    String v => int.tryParse(v),
+    _ => null,
+  };
 }

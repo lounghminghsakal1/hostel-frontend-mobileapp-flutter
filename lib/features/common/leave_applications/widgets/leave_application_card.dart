@@ -1,3 +1,5 @@
+import '../../../../core/widgets/student_business_details.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -60,10 +62,17 @@ class LeaveApplicationCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.xl),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (showStudent && application.student != null)
+                  StudentBusinessDetails(student: application.student!),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -74,7 +83,11 @@ class LeaveApplicationCard extends StatelessWidget {
                         color: AppColors.navySoft,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      child: const Icon(Icons.event_note_rounded, color: AppColors.navy, size: 22),
+                      child: const Icon(
+                        Icons.event_note_rounded,
+                        color: AppColors.navy,
+                        size: 22,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -85,13 +98,18 @@ class LeaveApplicationCard extends StatelessWidget {
                             showStudent
                                 ? (application.studentName ?? 'Student')
                                 : leaveDateRangeLabel(application),
-                            style: textTheme.titleMedium?.copyWith(fontSize: 14.5),
+                            style: textTheme.titleMedium?.copyWith(
+                              fontSize: 14.5,
+                            ),
                           ),
                           const SizedBox(height: 3),
                           Text(
                             showStudent
-                                ? [leaveDateRangeLabel(application), if (studentSubtitle.isNotEmpty) studentSubtitle]
-                                    .join('\n')
+                                ? [
+                                    leaveDateRangeLabel(application),
+                                    if (studentSubtitle.isNotEmpty)
+                                      studentSubtitle,
+                                  ].join('\n')
                                 : leaveDaysLabel(application),
                             style: textTheme.bodySmall,
                           ),
@@ -109,7 +127,8 @@ class LeaveApplicationCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodyMedium,
                 ),
-                if (rejectionReason != null && application.status == LeaveStatus.rejected) ...[
+                if (rejectionReason != null &&
+                    application.status == LeaveStatus.rejected) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Container(
                     width: double.infinity,
@@ -120,7 +139,9 @@ class LeaveApplicationCard extends StatelessWidget {
                     ),
                     child: Text(
                       'Reason for rejection: $rejectionReason',
-                      style: textTheme.bodySmall?.copyWith(color: AppColors.error),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.error,
+                      ),
                     ),
                   ),
                 ],
@@ -129,7 +150,10 @@ class LeaveApplicationCard extends StatelessWidget {
                 else ...[
                   const SizedBox(height: AppSpacing.sm),
                   Divider(height: 1, color: AppColors.navyAlpha(0.08)),
-                  Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: actions,
+                  ),
                 ],
               ],
             ),

@@ -1,10 +1,12 @@
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/api_endpoints.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/date_format.dart';
 import '../../../../core/widgets/home_header.dart';
 import '../../../../core/widgets/quick_link_card.dart';
 import '../../../common/auth/widgets/logout.dart';
@@ -17,6 +19,8 @@ class AdminHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(adminProfileProvider);
+    final names = profile.valueOrNull;
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
@@ -24,8 +28,14 @@ class AdminHomeScreen extends ConsumerWidget {
         child: Column(
           children: [
             HomeHeader(
-              greeting: 'Hostel Admin',
-              subtitle: 'Today · ${toDisplayDate(DateTime.now())}',
+              greeting: names?['hostelAdminName']?.toString() ?? 'Hostel Admin',
+              subtitle: names == null
+                  ? (profile.hasError
+                        ? 'Profile unavailable'
+                        : profile.isLoading
+                        ? 'Loading profile...'
+                        : 'Profile unavailable')
+                  : '${(names['hostel'] as Map?)?['hostelName'] ?? 'Hostel unavailable'} | ${(names['college'] as Map?)?['collegeName'] ?? 'College unavailable'}',
               initials: 'HA',
               onLogout: () => confirmLogout(context, ref),
             ),
@@ -55,3 +65,12 @@ class AdminHomeScreen extends ConsumerWidget {
     );
   }
 }
+
+final adminProfileProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((
+  ref,
+) async {
+  final response = await ref
+      .watch(dioProvider)
+      .get(ApiEndpoints.adminSplashScreen);
+  return response.data['data'] as Map<String, dynamic>?;
+});

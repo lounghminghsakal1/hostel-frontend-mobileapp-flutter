@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/api_endpoints.dart';
@@ -9,11 +11,14 @@ class AdminAttendanceRepository {
 
   final Dio _dio;
 
-  Future<AttendanceRecordsResult> getAttendanceRecords(AttendanceQuery query) async {
+  Future<AttendanceRecordsResult> getAttendanceRecords(
+    AttendanceQuery query,
+  ) async {
     try {
       final response = await _dio.get(
         ApiEndpoints.attendanceRecords,
         queryParameters: {
+          ...jsonDecode(query.filters) as Map<String, dynamic>,
           'date': ?query.date,
           'fromDate': ?query.fromDate,
           'toDate': ?query.toDate,
@@ -28,14 +33,20 @@ class AdminAttendanceRepository {
       }
       final status = body['status'];
       if (status != null && status != 'success') {
-        throw ApiException(body['message'] as String? ?? 'Failed to load attendance records');
+        throw ApiException(
+          body['message'] as String? ?? 'Failed to load attendance records',
+        );
       }
       final data = body['data'];
       if (data is! Map<String, dynamic>) {
         throw ApiException('Attendance records response was malformed');
       }
       final meta = body['meta'];
-      return AttendanceRecordsResult.fromJson(data, meta is Map<String, dynamic> ? meta : null, query);
+      return AttendanceRecordsResult.fromJson(
+        data,
+        meta is Map<String, dynamic> ? meta : null,
+        query,
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

@@ -15,6 +15,7 @@ typedef AttendanceQuery = ({
   AttendanceStatusFilter status,
   int page,
   int pageSize,
+  String filters,
 });
 
 class AttendanceSummary {
@@ -32,20 +33,28 @@ class AttendanceSummary {
   /// Students with no present record at all in the date filter.
   final int absentCount;
 
-  factory AttendanceSummary.fromJson(Map<String, dynamic> json) => AttendanceSummary(
-        totalStudents: _asInt(json['totalStudentsOfTheHostel']) ?? 0,
-        presentCount: _asInt(json['totalStudentsWithatleastOnePresentDuringDateFilter']) ?? 0,
-        absentCount: _asInt(json['completelyAbsentStudentsCountDuringDates']) ?? 0,
-      );
+  factory AttendanceSummary.fromJson(
+    Map<String, dynamic> json,
+  ) => AttendanceSummary(
+    totalStudents: _asInt(json['totalStudentsOfTheHostel']) ?? 0,
+    presentCount:
+        _asInt(json['totalStudentsWithatleastOnePresentDuringDateFilter']) ?? 0,
+    absentCount: _asInt(json['completelyAbsentStudentsCountDuringDates']) ?? 0,
+  );
 }
 
 /// One attendance-marked row (status = present).
 class PresentAttendanceRecord {
   const PresentAttendanceRecord({
+    this.studentImageKey,
+    this.contactNumber,
+    this.parentMobileNumber,
     required this.studentName,
     required this.rollNumber,
     required this.roomNumber,
     required this.attendanceDate,
+    this.reportedTime,
+    this.departmentName,
     required this.capturedImageKey,
     required this.faceMatchingPercentage,
     required this.locationDeviationFromHostel,
@@ -54,10 +63,16 @@ class PresentAttendanceRecord {
     required this.longitude,
   });
 
+  final String? studentImageKey;
+  final String? contactNumber;
+  final String? parentMobileNumber;
   final String studentName;
   final String rollNumber;
   final String? roomNumber;
   final String? attendanceDate;
+  final String? reportedTime;
+  final String? departmentName;
+
   /// S3 key of the capture; exchanged for a download url only when viewed.
   final String? capturedImageKey;
   final double? faceMatchingPercentage;
@@ -72,13 +87,24 @@ class PresentAttendanceRecord {
   factory PresentAttendanceRecord.fromJson(Map<String, dynamic> json) {
     final student = _map(json['student']);
     return PresentAttendanceRecord(
-      studentName: (json['studentName'] ?? student?['studentName'])?.toString() ?? '',
-      rollNumber: (json['rollNumber'] ?? student?['rollNumber'])?.toString() ?? '',
+      reportedTime: json['reportedTime']?.toString(),
+      departmentName: _map(
+        student?['department'],
+      )?['departmentName']?.toString(),
+      studentImageKey: student?['studentImageKey']?.toString(),
+      contactNumber: student?['contactNumber']?.toString(),
+      parentMobileNumber: student?['parentMobileNumber']?.toString(),
+      studentName:
+          (json['studentName'] ?? student?['studentName'])?.toString() ?? '',
+      rollNumber:
+          (json['rollNumber'] ?? student?['rollNumber'])?.toString() ?? '',
       roomNumber: _roomNumber(json, student),
       attendanceDate: json['attendanceDate']?.toString(),
       capturedImageKey: json['capturedImageKey'] as String?,
       faceMatchingPercentage: _asDouble(json['faceMatchingPercentage']),
-      locationDeviationFromHostel: _asDouble(json['locationDeviationFromHostel']),
+      locationDeviationFromHostel: _asDouble(
+        json['locationDeviationFromHostel'],
+      ),
       isLocatedWithinHostelRadius: json['isLocatedWithinHostelRadius'] == true,
       latitude: _asDouble(json['latitude']),
       longitude: _asDouble(json['longitude']),
@@ -87,12 +113,18 @@ class PresentAttendanceRecord {
 
   Uri? get mapUri => (latitude == null || longitude == null)
       ? null
-      : Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '$latitude,$longitude'});
+      : Uri.https('www.google.com', '/maps/search/', {
+          'api': '1',
+          'query': '$latitude,$longitude',
+        });
 }
 
 /// One absent row (status = absent): a student absent on at least one day.
 class AbsentAttendanceRecord {
   const AbsentAttendanceRecord({
+    this.studentImageKey,
+    this.contactNumber,
+    this.parentMobileNumber,
     required this.studentName,
     required this.rollNumber,
     required this.roomNumber,
@@ -100,6 +132,9 @@ class AbsentAttendanceRecord {
     required this.absentDates,
   });
 
+  final String? studentImageKey;
+  final String? contactNumber;
+  final String? parentMobileNumber;
   final String studentName;
   final String rollNumber;
   final String? roomNumber;
@@ -111,37 +146,57 @@ class AbsentAttendanceRecord {
     final department = json['department'] ?? student?['department'];
     final dates = json['absentDates'];
     return AbsentAttendanceRecord(
-      studentName: (json['studentName'] ?? student?['studentName'])?.toString() ?? '',
-      rollNumber: (json['rollNumber'] ?? student?['rollNumber'])?.toString() ?? '',
+      studentImageKey: json['studentImageKey']?.toString(),
+      contactNumber: json['contactNumber']?.toString(),
+      parentMobileNumber: json['parentMobileNumber']?.toString(),
+      studentName:
+          (json['studentName'] ?? student?['studentName'])?.toString() ?? '',
+      rollNumber:
+          (json['rollNumber'] ?? student?['rollNumber'])?.toString() ?? '',
       roomNumber: _roomNumber(json, student),
       departmentName: switch (department) {
         Map<String, dynamic> d => d['departmentName']?.toString(),
         String d => d,
         _ => json['departmentName']?.toString(),
       },
-      absentDates: dates is List ? dates.map((d) => d.toString()).toList() : const [],
+      absentDates: dates is List
+          ? dates.map((d) => d.toString()).toList()
+          : const [],
     );
   }
 }
 
 /// The response's top-level `meta`: `{page, pageSize, totalPages}`.
 class PaginationMeta {
-  const PaginationMeta({required this.page, required this.totalPages, this.totalCount});
+  const PaginationMeta({
+    required this.page,
+    required this.totalPages,
+    this.totalCount,
+    this.pageSize = 20,
+  });
 
   final int page;
+  final int pageSize;
   final int totalPages;
 
   /// Only present if the backend sends one.
   final int? totalCount;
 
-  factory PaginationMeta.fromJson(Map<String, dynamic>? json, {required int fallbackPage, required int pageSize}) {
+  factory PaginationMeta.fromJson(
+    Map<String, dynamic>? json, {
+    required int fallbackPage,
+    required int pageSize,
+  }) {
     final totalCount = _asInt(json?['totalCount'] ?? json?['total']);
-    final computedPages = (totalCount != null && pageSize > 0) ? (totalCount / pageSize).ceil() : 1;
+    final computedPages = (totalCount != null && pageSize > 0)
+        ? (totalCount / pageSize).ceil()
+        : 1;
     final totalPages = _asInt(json?['totalPages']) ?? computedPages;
     return PaginationMeta(
       page: _asInt(json?['page']) ?? fallbackPage,
       totalPages: totalPages < 1 ? 1 : totalPages,
       totalCount: totalCount,
+      pageSize: _asInt(json?['pageSize']) ?? pageSize,
     );
   }
 }
@@ -174,8 +229,12 @@ class AttendanceRecordsResult {
     final isAbsent = query.status == AttendanceStatusFilter.absent;
     return AttendanceRecordsResult(
       summary: AttendanceSummary.fromJson(_map(data['summary']) ?? const {}),
-      presentRecords: isAbsent ? const [] : rows.map(PresentAttendanceRecord.fromJson).toList(),
-      absentRecords: isAbsent ? rows.map(AbsentAttendanceRecord.fromJson).toList() : const [],
+      presentRecords: isAbsent
+          ? const []
+          : rows.map(PresentAttendanceRecord.fromJson).toList(),
+      absentRecords: isAbsent
+          ? rows.map(AbsentAttendanceRecord.fromJson).toList()
+          : const [],
       pagination: PaginationMeta.fromJson(
         meta,
         fallbackPage: query.page,
@@ -190,17 +249,18 @@ String? _roomNumber(Map<String, dynamic> json, Map<String, dynamic>? student) {
   return (json['roomNumber'] ?? room?['roomNumber'])?.toString();
 }
 
-Map<String, dynamic>? _map(Object? value) => value is Map<String, dynamic> ? value : null;
+Map<String, dynamic>? _map(Object? value) =>
+    value is Map<String, dynamic> ? value : null;
 
 int? _asInt(Object? value) => switch (value) {
-      int v => v,
-      num v => v.toInt(),
-      String v => int.tryParse(v),
-      _ => null,
-    };
+  int v => v,
+  num v => v.toInt(),
+  String v => int.tryParse(v),
+  _ => null,
+};
 
 double? _asDouble(Object? value) => switch (value) {
-      num v => v.toDouble(),
-      String v => double.tryParse(v),
-      _ => null,
-    };
+  num v => v.toDouble(),
+  String v => double.tryParse(v),
+  _ => null,
+};

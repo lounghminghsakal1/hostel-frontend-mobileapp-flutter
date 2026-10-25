@@ -1,10 +1,11 @@
+import 'package:dio/dio.dart';
+import 'package:hostel_management_frontend_mobile_app_flutter/core/network/dio_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:hostel_management_frontend_mobile_app_flutter/core/router/app_router.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/core/router/app_routes.dart';
-import 'package:hostel_management_frontend_mobile_app_flutter/core/widgets/app_search_field.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/core/widgets/gradient_button.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/common/auth/model/user_role.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/common/auth/providers/auth_providers.dart';
@@ -35,6 +36,49 @@ Future<ProviderContainer> _pumpApp(
 }) async {
   final container = ProviderContainer(
     overrides: [
+      dioProvider.overrideWithValue(
+        Dio()
+          ..interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                final prefix =
+                    options.queryParameters['starts_with']?.toString() ?? '';
+                final rooms =
+                    [
+                          {
+                            'id': 1,
+                            'roomNumber': '101',
+                            'capacity': 2,
+                            'occupied': 1,
+                            'remaining': 1,
+                          },
+                          {
+                            'id': 2,
+                            'roomNumber': '202',
+                            'capacity': 2,
+                            'occupied': 2,
+                            'remaining': 0,
+                          },
+                        ]
+                        .where(
+                          (r) => (r['roomNumber'] as String).startsWith(prefix),
+                        )
+                        .toList();
+                handler.resolve(
+                  Response(
+                    requestOptions: options,
+                    statusCode: 200,
+                    data: {
+                      'status': 'success',
+                      'data': options.path == '/rooms' ? rooms : [],
+                      'meta': {'page': 1, 'pageSize': 20, 'totalPages': 1},
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+      ),
       authControllerProvider.overrideWith(() => auth ?? _TestAuthController()),
       studentHomeProvider.overrideWith(
         (ref) async =>
@@ -145,26 +189,36 @@ void main() {
     (tester) async {
       await _pumpApp(tester, AppRoutes.adminRooms);
       expect(find.byType(NavigationDestination), findsNWidgets(5));
-      await tester.enterText(find.byType(TextField), '101');
+      await tester.tap(find.text('Search and filters'));
       await tester.pumpAndSettle();
-      expect(find.text('1 result'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField).first, '101');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Room 101'), findsOneWidget);
+      expect(find.text('Room 202'), findsNothing);
       await tester.tap(find.text('Students'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rooms').last);
       await tester.pumpAndSettle();
       expect(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        tester
+            .widget<EditableText>(find.byType(EditableText).first)
+            .controller
+            .text,
         '101',
       );
-      await tester.tap(find.byTooltip('Clear search'));
+      await tester.enterText(find.byType(TextFormField).first, '');
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        tester
+            .widget<EditableText>(find.byType(EditableText).first)
+            .controller
+            .text,
         '',
       );
-      expect(find.byTooltip('Clear search'), findsNothing);
-      expect(find.text('1 result'), findsNothing);
-      expect(find.byType(AppSearchField), findsOneWidget);
+      expect(find.text('Room 101'), findsOneWidget);
+      expect(find.text('Room 202'), findsOneWidget);
     },
   );
 
