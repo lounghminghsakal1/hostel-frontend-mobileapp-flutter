@@ -37,13 +37,17 @@ class UpcomingEventModel {
   bool get isOngoing => !hasEnded && startingAt.isBefore(DateTime.now());
 
   factory UpcomingEventModel.fromJson(Map<String, dynamic> json) {
-    final startingAt = _asTimestamp(json['startingAt']) ?? DateTime.now();
+    final startingAt = _asTimestamp(json['startingAt']);
+    final endingAt = _asTimestamp(json['endingAt']);
+    if (startingAt == null || endingAt == null) {
+      throw const FormatException('Event start and end times are required');
+    }
     return UpcomingEventModel(
       id: _asInt(json['id'])!,
       eventName: json['eventName']?.toString() ?? '',
       eventDescription: json['eventDescription']?.toString() ?? '',
       startingAt: startingAt,
-      endingAt: _asTimestamp(json['endingAt']) ?? startingAt,
+      endingAt: endingAt,
       // Treat a missing flag as active, since only admins can deactivate.
       isActive: json['isActive'] != false,
       eventImageKey: _nonEmpty(json['eventImageKey']),
@@ -61,11 +65,11 @@ String? _nonEmpty(Object? value) {
 }
 
 int? _asInt(Object? value) => switch (value) {
-      int v => v,
-      num v => v.toInt(),
-      String v => int.tryParse(v),
-      _ => null,
-    };
+  int v => v,
+  num v => v.toInt(),
+  String v => int.tryParse(v),
+  _ => null,
+};
 
 DateTime? _asTimestamp(Object? value) =>
     value == null ? null : DateTime.tryParse(value.toString())?.toLocal();

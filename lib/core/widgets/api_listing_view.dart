@@ -13,6 +13,7 @@ class ApiListingView extends ConsumerStatefulWidget {
     required this.filters,
     required this.itemBuilder,
     this.events = false,
+    this.dateFilters = false,
     this.defaults = const {},
     this.includeRow,
   });
@@ -20,7 +21,7 @@ class ApiListingView extends ConsumerStatefulWidget {
   final List<ListingFilter> filters;
   final Widget Function(BuildContext, Map<String, dynamic>, VoidCallback)
   itemBuilder;
-  final bool events;
+  final bool events, dateFilters;
   final Map<String, String> defaults;
   final bool Function(Map<String, dynamic>)? includeRow;
   @override
@@ -120,7 +121,13 @@ class ApiListingViewState extends ConsumerState<ApiListingView> {
               child: ListingFilters(
                 fields: widget.filters,
                 values: _filters,
-                dates: widget.events,
+                dates: widget.events || widget.dateFilters,
+                dateRangeLabel: widget.dateFilters
+                    ? 'Announcement date range'
+                    : 'Event date range',
+                dateRangeHelp: widget.dateFilters
+                    ? 'Only announcements fully contained in this date range appear.'
+                    : 'Events starting and ending within this range. Boundaries use UTC dates.',
                 onChanged: (filters) {
                   _filters = filters;
                   _page = 1;

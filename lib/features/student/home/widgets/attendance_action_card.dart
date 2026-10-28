@@ -1,194 +1,226 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/hostel_colors.dart';
+import '../../../../core/utils/date_format.dart';
+import '../model/student_home_model.dart';
 
-/// Top-center "Mark Attendance" action shown to students while the
-/// attendance window is open (driven by `canMarkAttendance` from the home API).
-class AttendanceActionCard extends StatefulWidget {
+class AttendanceActionCard extends StatelessWidget {
   const AttendanceActionCard({
     super.key,
-    required this.canMarkAttendance,
-    required this.onTap,
+    required this.home,
+    required this.onMark,
+    required this.onRefresh,
     this.isBusy = false,
-    this.isComplete = false,
-    this.inactiveMessage = 'Attendance window is closed right now',
+    this.locallyMarkedAt,
   });
-
-  final bool canMarkAttendance;
-  final VoidCallback onTap;
-
-  /// True while a capture/upload/submit flow is already in flight, so the
-  /// card shows progress instead of accepting another tap.
+  final StudentHomeModel home;
+  final VoidCallback onMark, onRefresh;
   final bool isBusy;
-  final bool isComplete;
-
-  /// Message shown on the inactive (tappable-to-refresh) variant of the
-  /// card, e.g. to distinguish "window closed" from "already marked today".
-  final String inactiveMessage;
-
-  @override
-  State<AttendanceActionCard> createState() => _AttendanceActionCardState();
-}
-
-class _AttendanceActionCardState extends State<AttendanceActionCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _confirmController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 550),
-    value: widget.isComplete ? 1 : 0,
-  );
-  late final Animation<double> _confirmScale = CurvedAnimation(
-    parent: _confirmController,
-    curve: Curves.elasticOut,
-  );
-
-  @override
-  void didUpdateWidget(covariant AttendanceActionCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // The one deliberate animated moment in this feature area: a satisfying
-    // pop when attendance just got marked. Every other transition here is
-    // static by design.
-    if (widget.isComplete && !oldWidget.isComplete) {
-      _confirmController.forward(from: 0);
-    } else if (!widget.isComplete && oldWidget.isComplete) {
-      _confirmController.value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _confirmController.dispose();
-    super.dispose();
-  }
-
+  final DateTime? locallyMarkedAt;
   @override
   Widget build(BuildContext context) {
-    if (!widget.canMarkAttendance) {
-      final background = widget.isComplete
-          ? AppColors.successSoft
-          : AppColors.navySoft;
-      final foreground = widget.isComplete
-          ? AppColors.success
-          : AppColors.navyAlpha(0.5);
-
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.xl),
-          onTap: widget.isBusy ? null : widget.onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.lg,
-              horizontal: AppSpacing.xl,
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
+    final state = home.attendanceState(
+      DateTime.now(),
+      locallyMarkedAt: locallyMarkedAt,
+    );
+    String time(DateTime value) => toDisplayTime(indiaWallTime(value));
+    if (state == AttendanceCardState.open) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: c.brand,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: c.scrim.withValues(alpha: .16),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-            ),
-            child: Row(
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
               children: [
-                ScaleTransition(
-                  scale: widget.isComplete
-                      ? _confirmScale
-                      : const AlwaysStoppedAnimation(1),
-                  child: Icon(
-                    widget.isComplete
-                        ? Icons.check_circle_rounded
-                        : Icons.lock_clock_rounded,
-                    color: foreground,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
+                Icon(Icons.circle, size: 8, color: c.marigold),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    widget.inactiveMessage,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: widget.isComplete
-                              ? AppColors.success
-                              : AppColors.navyAlpha(0.6),
-                        ),
+                    home.windowClosesAt == null
+                        ? 'Window open'
+                        : 'Window open \u00b7 closes ${time(home.windowClosesAt!)}',
+                    style: TextStyle(
+                      color: c.onBrandMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                Icon(
-                  Icons.refresh_rounded,
-                  color: AppColors.navyAlpha(0.4),
-                  size: 20,
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 18),
+            Text(
+              "Mark tonight's attendance",
+              style: TextStyle(
+                color: c.onBrand,
+                fontSize: 22,
+                height: 1.2,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Takes a selfie and your location. About 10 seconds.',
+              style: TextStyle(
+                color: c.onBrandMuted,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: isBusy ? null : onMark,
+              style: FilledButton.styleFrom(
+                backgroundColor: c.marigold,
+                foregroundColor: c.onMarigold,
+                disabledBackgroundColor: c.marigold,
+                disabledForegroundColor: c.onMarigold,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: isBusy
+                  ? SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: c.onMarigold,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.face_retouching_natural_outlined,
+                      size: 20,
+                    ),
+              label: Text(isBusy ? 'Submitting...' : 'Mark attendance'),
+            ),
+          ],
         ),
       );
     }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.xl + 2),
-        onTap: widget.isBusy ? null : widget.onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.xxl,
-            horizontal: AppSpacing.xl,
+    final (eyebrow, title, body, icon, color, background) = switch (state) {
+      AttendanceCardState.marked => (
+        'Marked for today',
+        "You're in for tonight",
+        home.markedAt != null || locallyMarkedAt != null
+            ? 'Marked at ${time(home.markedAt ?? locallyMarkedAt!)} \u00b7 at the hostel'
+            : 'Your attendance has been recorded.',
+        Icons.check_rounded,
+        c.success,
+        c.successSoft,
+      ),
+      AttendanceCardState.upcoming => (
+        'Opens at ${time(home.windowOpensAt!)}',
+        "Attendance isn't open yet",
+        home.windowClosesAt == null
+            ? 'The button appears here when the window opens.'
+            : "Tonight's window is ${time(home.windowOpensAt!)} \u2013 ${time(home.windowClosesAt!)}. The button appears here when it opens.",
+        Icons.schedule_outlined,
+        c.inkMuted,
+        c.surfaceRaised,
+      ),
+      AttendanceCardState.missed => (
+        'Closed at ${time(home.windowClosesAt!)}',
+        "You missed tonight's attendance",
+        'Your hostel admin can see this. Talk to them if you were in the hostel.',
+        Icons.cancel_outlined,
+        c.danger,
+        c.surfaceRaised,
+      ),
+      AttendanceCardState.photoNeeded => (
+        'Photo needed',
+        'Ask the hostel office to add your photo',
+        'Attendance compares your selfie with your profile photo. You can mark it once your photo is on file.',
+        Icons.photo_camera_outlined,
+        c.warning,
+        c.warningSoft,
+      ),
+      _ => (
+        'Attendance',
+        'Attendance is unavailable right now',
+        'Refresh to check the latest attendance status.',
+        Icons.schedule_outlined,
+        c.inkMuted,
+        c.surfaceRaised,
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(20),
+        border: background == c.surfaceRaised
+            ? Border.all(color: c.line)
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: state == AttendanceCardState.marked
+                ? c.success
+                : state == AttendanceCardState.missed
+                ? c.dangerSoft
+                : c.surfaceSunken,
+            child: Icon(
+              icon,
+              color: state == AttendanceCardState.marked ? c.onSuccess : color,
+            ),
           ),
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppRadius.xl + 2),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.navyAlpha(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  eyebrow,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                child: widget.isBusy
-                    ? const SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: CircularProgressIndicator(
-                          color: AppColors.brassSoft,
-                          strokeWidth: 2.4,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.face_retouching_natural_rounded,
-                        color: AppColors.white,
-                        size: 28,
-                      ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                widget.isBusy ? 'Submitting…' : 'Mark Attendance',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                widget.isBusy
-                    ? 'Please wait while we verify you'
-                    : 'Attendance window is open · tap to scan',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.78),
-                    ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: c.ink,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: c.inkMuted,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+                if (state == AttendanceCardState.unavailable)
+                  TextButton(
+                    onPressed: isBusy ? null : onRefresh,
+                    child: const Text('Refresh status'),
+                  ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

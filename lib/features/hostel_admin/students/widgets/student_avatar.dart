@@ -17,15 +17,17 @@ class StudentAvatar extends ConsumerWidget {
     required this.student,
     required this.size,
     this.localImagePath,
+    this.circular = false,
   });
 
   final StudentModel student;
   final double size;
   final String? localImagePath;
+  final bool circular;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final radius = BorderRadius.circular(size * 0.32);
+    final radius = BorderRadius.circular(circular ? size / 2 : size * 0.32);
     final initials = Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(

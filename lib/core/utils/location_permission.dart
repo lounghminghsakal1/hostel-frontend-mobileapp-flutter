@@ -15,7 +15,9 @@ Future<bool> ensureLocationPermission(BuildContext context) async {
   if (!serviceEnabled) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please turn on location services to mark attendance.')),
+        const SnackBar(
+          content: Text('Please turn on location services to mark attendance.'),
+        ),
       );
     }
     return false;
@@ -31,10 +33,13 @@ Future<bool> ensureLocationPermission(BuildContext context) async {
     return false;
   }
 
-  if (permission == LocationPermission.denied) {
+  if (permission != LocationPermission.whileInUse &&
+      permission != LocationPermission.always) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permission is required to mark attendance.')),
+        const SnackBar(
+          content: Text('Location permission is required to mark attendance.'),
+        ),
       );
     }
     return false;

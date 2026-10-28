@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/hostel_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/widgets/gradient_button.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
-import '../../../common/leave_applications/widgets/leave_application_details.dart';
+import '../widgets/student_leave_card.dart';
 import '../widgets/cancel_leave_application.dart';
-import '../widgets/leave_application_form_sheet.dart';
+import 'leave_application_form_screen.dart';
 
 /// One of the student's own applications in full. While it's waiting for
 /// approval it can still be edited or cancelled.
 class StudentLeaveApplicationDetailScreen extends ConsumerStatefulWidget {
-  const StudentLeaveApplicationDetailScreen({super.key, required this.applicationId});
+  const StudentLeaveApplicationDetailScreen({
+    super.key,
+    required this.applicationId,
+  });
 
   final int applicationId;
 
@@ -22,21 +24,29 @@ class StudentLeaveApplicationDetailScreen extends ConsumerStatefulWidget {
       _StudentLeaveApplicationDetailScreenState();
 }
 
-class _StudentLeaveApplicationDetailScreenState extends ConsumerState<StudentLeaveApplicationDetailScreen> {
+class _StudentLeaveApplicationDetailScreenState
+    extends ConsumerState<StudentLeaveApplicationDetailScreen> {
   bool _isCancelling = false;
 
   Future<void> _edit(LeaveApplicationModel application) async {
     final messenger = ScaffoldMessenger.of(context);
-    final saved = await showLeaveApplicationFormSheet(context, application: application);
+    final saved = await showLeaveApplicationForm(
+      context,
+      application: application,
+    );
     if (!saved || !mounted) return;
     ref.invalidate(myLeaveApplicationDetailProvider(widget.applicationId));
     ref.invalidate(myLeaveApplicationsProvider);
     messenger.showSnackBar(
-      const SnackBar(content: Text('Leave application updated'), behavior: SnackBarBehavior.floating),
+      const SnackBar(
+        content: Text('Leave application updated'),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
-  Future<void> _cancel(LeaveApplicationModel application) => confirmAndCancelLeaveApplication(
+  Future<void> _cancel(LeaveApplicationModel application) =>
+      confirmAndCancelLeaveApplication(
         context,
         ref,
         application,
@@ -45,16 +55,19 @@ class _StudentLeaveApplicationDetailScreenState extends ConsumerState<StudentLea
 
   @override
   Widget build(BuildContext context) {
-    final detailProvider = myLeaveApplicationDetailProvider(widget.applicationId);
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
+    final detailProvider = myLeaveApplicationDetailProvider(
+      widget.applicationId,
+    );
     final applicationAsync = ref.watch(detailProvider);
     final application = applicationAsync.valueOrNull;
 
     return Scaffold(
-      backgroundColor: AppColors.paper,
+      backgroundColor: c.surface,
       appBar: AppBar(
-        title: const Text('Leave Application'),
-        backgroundColor: AppColors.paper,
-        foregroundColor: AppColors.navy,
+        title: const Text('Leave request'),
+        backgroundColor: c.surface,
+        foregroundColor: c.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
       ),
@@ -68,16 +81,19 @@ class _StudentLeaveApplicationDetailScreenState extends ConsumerState<StudentLea
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppColors.errorSoft,
-                  child: Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 26),
+                  backgroundColor: c.dangerSoft,
+                  child: Icon(
+                    Icons.wifi_off_rounded,
+                    color: c.danger,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.navyAlpha(0.65),
-                      ),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: c.inkMuted),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 TextButton(
@@ -90,7 +106,11 @@ class _StudentLeaveApplicationDetailScreenState extends ConsumerState<StudentLea
         ),
         data: (application) => RefreshIndicator(
           onRefresh: () => ref.refresh(detailProvider.future),
-          child: LeaveApplicationDetails(application: application),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [StudentLeaveCard(application: application)],
+          ),
         ),
       ),
       bottomNavigationBar: application != null && application.isPending
@@ -109,30 +129,49 @@ class _StudentLeaveApplicationDetailScreenState extends ConsumerState<StudentLea
                       child: SizedBox(
                         height: 54,
                         child: OutlinedButton.icon(
-                          onPressed: _isCancelling ? null : () => _cancel(application),
+                          onPressed: _isCancelling
+                              ? null
+                              : () => _cancel(application),
                           icon: _isCancelling
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: c.ink,
+                                  ),
                                 )
                               : const Icon(Icons.close_rounded, size: 20),
                           label: const Text('Cancel leave'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.navy,
-                            side: const BorderSide(color: AppColors.navy, width: 1.4),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                            foregroundColor: c.danger,
+                            side: BorderSide(color: c.danger),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: GradientButton(
-                        label: 'Edit',
-                        icon: Icons.edit_outlined,
-                        onPressed: _isCancelling ? null : () => _edit(application),
+                      child: FilledButton(
+                        onPressed: _isCancelling
+                            ? null
+                            : () => _edit(application),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: c.primary,
+                          foregroundColor: c.onPrimary,
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Edit'),
                       ),
                     ),
                   ],

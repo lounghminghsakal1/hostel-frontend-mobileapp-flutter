@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
+import '../theme/hostel_colors.dart';
 
 /// Labeled destinations with keyboard, screen-reader and touch support.
 class AppBottomNav extends StatelessWidget {
@@ -19,22 +19,31 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.white,
-        border: Border(top: BorderSide(color: AppColors.navyAlpha(0.08))),
+        color: c.surfaceRaised,
+        border: Border(top: BorderSide(color: c.line)),
       ),
       child: NavigationBar(
+        height: 76,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected) ? c.ink : c.inkMuted,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         selectedIndex: activeIndex,
         onDestinationSelected: onItemTap,
-        backgroundColor: AppColors.white,
+        backgroundColor: c.surfaceRaised,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: AppColors.brassSoft,
+        indicatorColor: c.marigoldSoft,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: List.generate(items.length, (index) {
           return NavigationDestination(
-            icon: Icon(items[index], color: AppColors.navyAlpha(0.45)),
-            selectedIcon: Icon(items[index], color: AppColors.brassDeep),
+            icon: Icon(items[index], color: c.inkMuted),
+            selectedIcon: Icon(items[index], color: c.marigoldInk),
             label: labels[index],
             tooltip: labels[index],
           );

@@ -5,10 +5,16 @@ class AppRoutes {
 
   static const String login = '/login';
   static const String setupPassword = '/setup-password';
-  static String setupPasswordWithToken(String token, {bool forgotPassword = false}) => Uri(
-        path: setupPassword,
-        queryParameters: {'token': token, if (forgotPassword) 'forgotPassword': 'true'},
-      ).toString();
+  static String setupPasswordWithToken(
+    String token, {
+    bool forgotPassword = false,
+  }) => Uri(
+    path: setupPassword,
+    queryParameters: {
+      'token': token,
+      if (forgotPassword) 'forgotPassword': 'true',
+    },
+  ).toString();
   static const String forgotPassword = '/forgot-password';
   static const String studentHome = '/student/home';
   static const String adminHome = '/admin/home';
@@ -17,9 +23,18 @@ class AppRoutes {
   static String adminStudentDetail(int id) => '$adminStudents/$id';
   static const String adminRooms = '/admin/rooms';
   static const String studentLeaveApplications = '/student/leave-applications';
-  static String studentLeaveApplicationDetail(int id) => '$studentLeaveApplications/$id';
+  static String studentLeaveApplicationDetail(int id) =>
+      '$studentLeaveApplications/$id';
   static const String adminLeaveApplications = '/admin/leave-applications';
-  static String adminLeaveApplicationDetail(int id) => '$adminLeaveApplications/$id';
+  static String adminLeaveApplicationDetail(int id) =>
+      '$adminLeaveApplications/$id';
+  static const String studentAnnouncements = '/student/announcements';
+  static String studentAnnouncementDetail(int id) =>
+      '$studentAnnouncements/$id';
+  static const String adminAnnouncements = '/admin/announcements';
+  static const String adminAnnouncementCreate = '$adminAnnouncements/new';
+  static String adminAnnouncementDetail(int id) => '$adminAnnouncements/$id';
+  static String adminAnnouncementEdit(int id) => '$adminAnnouncements/$id/edit';
   static const String studentEvents = '/student/events';
   static String studentEventDetail(int id) => '$studentEvents/$id';
   static const String adminEvents = '/admin/events';

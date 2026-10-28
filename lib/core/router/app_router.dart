@@ -1,3 +1,7 @@
+import '../../features/common/announcements/screens/announcements_screen.dart';
+import '../../features/common/announcements/screens/announcement_detail_screen.dart';
+import '../../features/common/announcements/screens/announcement_form_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,44 +54,64 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           const destinations = [
             AppRoutes.studentHome,
             AppRoutes.studentLeaveApplications,
+            AppRoutes.studentAnnouncements,
             AppRoutes.studentEvents,
             AppRoutes.adminHome,
             AppRoutes.adminRooms,
             AppRoutes.adminLeaveApplications,
             AppRoutes.adminEvents,
             AppRoutes.adminStudents,
+            AppRoutes.adminAnnouncements,
           ];
-          final isStudent = navigationShell.currentIndex < 3;
-          final offset = isStudent ? 0 : 3;
+          final isStudent = navigationShell.currentIndex < 4;
+          const adminNavBranches = [4, 5, 6, 9, 7];
+          final adminNavIndex = switch (navigationShell.currentIndex) {
+            4 => 0,
+            5 => 1,
+            6 => 2,
+            9 => 3,
+            7 => 4,
+            _ => -1,
+          };
+          final showAdminNavigation = !isStudent && adminNavIndex >= 0;
           return Scaffold(
             body: navigationShell,
-            bottomNavigationBar: destinations.contains(state.uri.path)
+            bottomNavigationBar:
+                (isStudent
+                    ? destinations.take(4).contains(state.uri.path)
+                    : showAdminNavigation &&
+                          destinations.contains(state.uri.path))
                 ? AppBottomNav(
                     items: isStudent
                         ? const [
-                            Icons.home_rounded,
-                            Icons.event_note_rounded,
+                            Icons.home_outlined,
+                            Icons.event_available_outlined,
+                            Icons.campaign_outlined,
                             Icons.celebration_outlined,
                           ]
                         : const [
                             Icons.home_rounded,
                             Icons.meeting_room_outlined,
                             Icons.event_note_rounded,
-                            Icons.celebration_outlined,
                             Icons.groups_outlined,
+                            Icons.campaign_outlined,
                           ],
                     labels: isStudent
-                        ? const ['Home', 'Leave', 'Events']
+                        ? const ['Home', 'Leave', 'Notices', 'Events']
                         : const [
                             'Home',
                             'Rooms',
                             'Leave',
-                            'Events',
                             'Students',
+                            'Notices',
                           ],
-                    activeIndex: navigationShell.currentIndex - offset,
+                    activeIndex: isStudent
+                        ? navigationShell.currentIndex
+                        : adminNavIndex,
                     onItemTap: (index) {
-                      navigationShell.goBranch(index + offset);
+                      navigationShell.goBranch(
+                        isStudent ? index : adminNavBranches[index],
+                      );
                     },
                   )
                 : null,
@@ -115,6 +139,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         StudentLeaveApplicationDetailScreen(
                           applicationId: int.parse(state.pathParameters['id']!),
                         ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.studentAnnouncements,
+                builder: (context, state) => const AnnouncementsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => AnnouncementDetailScreen(
+                      id: int.parse(state.pathParameters['id']!),
+                    ),
                   ),
                 ],
               ),
@@ -165,6 +205,36 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                         AdminLeaveApplicationDetailScreen(
                           applicationId: int.parse(state.pathParameters['id']!),
                         ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminAnnouncements,
+                builder: (context, state) =>
+                    const AnnouncementsScreen(isAdmin: true),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const AnnouncementFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => AnnouncementDetailScreen(
+                      id: int.parse(state.pathParameters['id']!),
+                      isAdmin: true,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) => AnnouncementFormScreen(
+                          id: int.parse(state.pathParameters['id']!),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

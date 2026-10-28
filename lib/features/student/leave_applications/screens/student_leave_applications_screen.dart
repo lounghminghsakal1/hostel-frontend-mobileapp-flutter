@@ -3,25 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/theme/hostel_colors.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
-import '../../../common/leave_applications/widgets/leave_application_card.dart';
 import '../widgets/cancel_leave_application.dart';
-import '../widgets/leave_application_form_sheet.dart';
+import '../widgets/student_leave_card.dart';
+import 'leave_application_form_screen.dart';
 
-/// The student's leave applications with their review status. Pending ones
-/// can still be edited or cancelled.
 class StudentLeaveApplicationsScreen extends ConsumerStatefulWidget {
   const StudentLeaveApplicationsScreen({super.key});
 
   @override
-  ConsumerState<StudentLeaveApplicationsScreen> createState() => _StudentLeaveApplicationsScreenState();
+  ConsumerState<StudentLeaveApplicationsScreen> createState() =>
+      _StudentLeaveApplicationsScreenState();
 }
 
-class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApplicationsScreen> {
+class _StudentLeaveApplicationsScreenState
+    extends ConsumerState<StudentLeaveApplicationsScreen> {
   /// Id of the application being cancelled, to show its button as busy.
   int? _cancellingId;
 
@@ -33,137 +31,219 @@ class _StudentLeaveApplicationsScreenState extends ConsumerState<StudentLeaveApp
 
   Future<void> _openForm({LeaveApplicationModel? application}) async {
     final messenger = ScaffoldMessenger.of(context);
-    final saved = await showLeaveApplicationFormSheet(context, application: application);
+    final saved = await showLeaveApplicationForm(
+      context,
+      application: application,
+    );
     if (!saved || !mounted) return;
     ref.invalidate(myLeaveApplicationsProvider);
-    if (application != null) ref.invalidate(myLeaveApplicationDetailProvider(application.id));
-    _showSnackBar(messenger, application == null ? 'Leave application submitted' : 'Leave application updated');
+    if (application != null) {
+      ref.invalidate(myLeaveApplicationDetailProvider(application.id));
+    }
+    _showSnackBar(
+      messenger,
+      application == null
+          ? 'Leave application submitted'
+          : 'Leave application updated',
+    );
   }
 
-  Future<void> _cancel(LeaveApplicationModel application) => confirmAndCancelLeaveApplication(
+  Future<void> _cancel(LeaveApplicationModel application) =>
+      confirmAndCancelLeaveApplication(
         context,
         ref,
         application,
-        onBusyChanged: (busy) => setState(() => _cancellingId = busy ? application.id : null),
+        onBusyChanged: (busy) =>
+            setState(() => _cancellingId = busy ? application.id : null),
       );
 
   @override
   Widget build(BuildContext context) {
-    final applicationsAsync = ref.watch(myLeaveApplicationsProvider);
-
+    final value = ref.watch(myLeaveApplicationsProvider);
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
+    final pending = value.valueOrNull?.any((a) => a.isPending) ?? false;
+    OutlinedButton action(
+      String label,
+      VoidCallback? onPressed, {
+      bool danger = false,
+      bool busy = false,
+    }) => OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: danger ? c.danger : c.ink,
+        side: BorderSide(color: danger ? c.danger : c.lineStrong),
+        minimumSize: const Size(0, 36),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
+      ),
+      child: busy
+          ? SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(color: c.danger, strokeWidth: 2),
+            )
+          : Text(label),
+    );
     return Scaffold(
-      backgroundColor: AppColors.paper,
+      backgroundColor: c.surface,
       appBar: AppBar(
-        title: const Text('Leave Applications'),
-        backgroundColor: AppColors.paper,
-        foregroundColor: AppColors.navy,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(),
-        backgroundColor: AppColors.navy,
-        foregroundColor: AppColors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Apply for leave'),
-      ),
-      body: applicationsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _LeaveApplicationsError(
-          message: error.toString(),
-          onRetry: () => ref.invalidate(myLeaveApplicationsProvider),
+        title: Text(
+          'Leave',
+          style: TextStyle(
+            color: c.ink,
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        data: (applications) => RefreshIndicator(
-          onRefresh: () => ref.refresh(myLeaveApplicationsProvider.future),
-          child: applications.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: const [
-                    SizedBox(height: 40),
-                    AppEmptyState(
-                      icon: Icons.event_available_rounded,
-                      title: 'No leave applications yet',
-                      message:
-                          'Applications you submit will show up here with their review status.',
+        backgroundColor: c.surface,
+        foregroundColor: c.ink,
+        surfaceTintColor: c.surface,
+        scrolledUnderElevation: 0,
+        actions: [
+          if (value.hasValue && !value.hasError && !pending)
+            TextButton.icon(
+              onPressed: () => _openForm(),
+              icon: const Icon(Icons.add, size: 18),
+              style: TextButton.styleFrom(foregroundColor: c.primary),
+              label: const Text('Apply for leave'),
+            ),
+        ],
+      ),
+      body: value.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('$e', textAlign: TextAlign.center),
+                TextButton(
+                  onPressed: () => ref.invalidate(myLeaveApplicationsProvider),
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        data: (applications) {
+          final sorted = [...applications]
+            ..sort((a, b) {
+              if (a.isPending != b.isPending) return a.isPending ? -1 : 1;
+              return b.fromDate.compareTo(a.fromDate);
+            });
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(myLeaveApplicationsProvider.future),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+              children: [
+                if (pending) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: c.infoSoft,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ],
-                )
-              : ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  // Bottom padding keeps the last card clear of the apply button.
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.xs,
-                    AppSpacing.xl,
-                    96,
-                  ),
-                  itemCount: applications.length,
-                  itemBuilder: (context, index) {
-                    final application = applications[index];
-                    final isCancelling = _cancellingId == application.id;
-                    return LeaveApplicationCard(
-                      application: application,
-                      onTap: () => context.push(AppRoutes.studentLeaveApplicationDetail(application.id)),
-                      actions: application.isPending
-                          ? [
-                              TextButton.icon(
-                                onPressed: _cancellingId != null ? null : () => _openForm(application: application),
-                                icon: const Icon(Icons.edit_outlined, size: 18),
-                                label: const Text('Edit'),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: c.info,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'You have a pending request',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                              TextButton.icon(
-                                onPressed: _cancellingId != null ? null : () => _cancel(application),
-                                icon: isCancelling
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
-                                      )
-                                    : const Icon(Icons.close_rounded, size: 18),
-                                label: const Text('Cancel'),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Edit or cancel it to apply for new dates.',
+                                style: TextStyle(
+                                  color: c.ink,
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (sorted.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 48,
+                      horizontal: 16,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.event_available_outlined,
+                          color: c.inkMuted,
+                          size: 36,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No leave applications yet',
+                          style: TextStyle(
+                            color: c.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your requests and hostel admin decisions will appear here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: c.inkMuted, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                for (final a in sorted)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: StudentLeaveCard(
+                      application: a,
+                      onTap: () => context.push(
+                        AppRoutes.studentLeaveApplicationDetail(a.id),
+                      ),
+                      actions: a.isPending
+                          ? [
+                              action(
+                                'Edit',
+                                _cancellingId != null
+                                    ? null
+                                    : () => _openForm(application: a),
+                              ),
+                              action(
+                                'Cancel request',
+                                _cancellingId != null ? null : () => _cancel(a),
+                                danger: true,
+                                busy: _cancellingId == a.id,
                               ),
                             ]
                           : const [],
-                    );
-                  },
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LeaveApplicationsError extends StatelessWidget {
-  const _LeaveApplicationsError({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.errorSoft,
-              child: Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 26),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.navyAlpha(0.65),
+                    ),
                   ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            TextButton(onPressed: onRetry, child: const Text('Try again')),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

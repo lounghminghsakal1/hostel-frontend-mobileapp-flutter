@@ -9,22 +9,44 @@ class RoomsRepository {
 
   final Dio _dio;
 
-  Future<List<RoomModel>> getRooms() async {
+  /// Collect each page so availability filters and totals cover the hostel.
+  Future<List<RoomModel>> getRooms({
+    Map<String, String> filters = const {},
+    CancelToken? cancelToken,
+  }) async {
     try {
-      final response = await _dio.get(
-        ApiEndpoints.rooms,
-        queryParameters: {'page': '1', 'pageSize': '20'},
-      );
-      final data = _unwrap(response.data, 'Failed to load rooms');
-      final list = switch (data) {
-        List<dynamic> l => l,
-        Map<String, dynamic> m when m['rooms'] is List =>
-          m['rooms'] as List<dynamic>,
-        _ => throw ApiException('Rooms response was malformed'),
-      };
-      return list
-          .map((r) => RoomModel.fromJson(r as Map<String, dynamic>))
-          .toList();
+      final rooms = <int, RoomModel>{};
+      var page = 1;
+      while (true) {
+        final response = await _dio.get(
+          ApiEndpoints.rooms,
+          queryParameters: {
+            'only_vacancy': 'false',
+            ...filters,
+            'page': '$page',
+            'pageSize': '20',
+          },
+          cancelToken: cancelToken,
+        );
+        final data = _unwrap(response.data, 'Failed to load rooms');
+        final list = switch (data) {
+          List<dynamic> l => l,
+          Map<String, dynamic> m when m['rooms'] is List =>
+            m['rooms'] as List<dynamic>,
+          _ => throw ApiException('Rooms response was malformed'),
+        };
+        for (final row in list) {
+          final room = RoomModel.fromJson(row as Map<String, dynamic>);
+          rooms[room.id] = room;
+        }
+        final body = response.data;
+        final meta = body is Map ? body['meta'] : null;
+        final totalPages = meta is Map
+            ? (meta['totalPages'] as num?)?.toInt() ?? 1
+            : 1;
+        if (page >= totalPages) return rooms.values.toList();
+        page++;
+      }
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/widgets/gradient_button.dart';
+import '../../../../core/theme/hostel_colors.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
-import '../../../common/leave_applications/widgets/leave_application_details.dart';
+import '../widgets/admin_leave_request_details.dart';
+import '../../../common/leave_applications/widgets/leave_status_chip.dart';
 
 /// One leave application in full. While it's pending the admin can approve
 /// or reject it; the screen then pops with the new [LeaveStatus].
 class AdminLeaveApplicationDetailScreen extends ConsumerStatefulWidget {
-  const AdminLeaveApplicationDetailScreen({super.key, required this.applicationId});
+  const AdminLeaveApplicationDetailScreen({
+    super.key,
+    required this.applicationId,
+  });
 
   final int applicationId;
 
@@ -21,7 +23,8 @@ class AdminLeaveApplicationDetailScreen extends ConsumerStatefulWidget {
       _AdminLeaveApplicationDetailScreenState();
 }
 
-class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveApplicationDetailScreen> {
+class _AdminLeaveApplicationDetailScreenState
+    extends ConsumerState<AdminLeaveApplicationDetailScreen> {
   /// The decision being submitted, to show the matching button as busy.
   LeaveStatus? _submitting;
 
@@ -30,7 +33,9 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Approve leave?'),
-        content: const Text('The student will see this application as approved.'),
+        content: const Text(
+          'The student will see this application as approved.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -53,7 +58,10 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
     );
     // `null` means the dialog was dismissed; an empty string means no reason.
     if (reason == null) return;
-    await _review(LeaveStatus.rejected, rejectionReason: reason.isEmpty ? null : reason);
+    await _review(
+      LeaveStatus.rejected,
+      rejectionReason: reason.isEmpty ? null : reason,
+    );
   }
 
   Future<void> _review(LeaveStatus decision, {String? rejectionReason}) async {
@@ -61,7 +69,9 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _submitting = decision);
     try {
-      await ref.read(leaveApplicationsRepositoryProvider).reviewLeaveApplication(
+      await ref
+          .read(leaveApplicationsRepositoryProvider)
+          .reviewLeaveApplication(
             id: widget.applicationId,
             decision: decision,
             rejectionReason: rejectionReason,
@@ -73,89 +83,134 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
       if (!mounted) return;
       setState(() => _submitting = null);
       messenger.showSnackBar(
-        SnackBar(content: Text(e.toString()), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final applicationAsync = ref.watch(adminLeaveApplicationDetailProvider(widget.applicationId));
+    final applicationAsync = ref.watch(
+      adminLeaveApplicationDetailProvider(widget.applicationId),
+    );
     final application = applicationAsync.valueOrNull;
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
 
     return Scaffold(
-      backgroundColor: AppColors.paper,
+      backgroundColor: c.surface,
       appBar: AppBar(
-        title: const Text('Leave Application'),
-        backgroundColor: AppColors.paper,
-        foregroundColor: AppColors.navy,
+        title: const Text('Leave request'),
+        backgroundColor: c.surface,
+        foregroundColor: c.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
+        actions: [
+          if (application != null) ...[
+            LeaveStatusChip(status: application.status),
+            const SizedBox(width: 16),
+          ],
+        ],
       ),
       body: applicationAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.navy),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xxl),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.wifi_off_rounded, color: AppColors.navyAlpha(0.4), size: 40),
-                const SizedBox(height: AppSpacing.md + 2),
+                Icon(Icons.wifi_off_rounded, color: c.inkMuted, size: 40),
+                const SizedBox(height: 18),
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.navyAlpha(0.6)),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: c.inkMuted),
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: 20),
                 TextButton(
-                  onPressed: () => ref.invalidate(adminLeaveApplicationDetailProvider(widget.applicationId)),
+                  onPressed: () => ref.invalidate(
+                    adminLeaveApplicationDetailProvider(widget.applicationId),
+                  ),
                   child: const Text('Try again'),
                 ),
               ],
             ),
           ),
         ),
-        data: (application) => LeaveApplicationDetails(application: application, showStudent: true),
+        data: (application) =>
+            AdminLeaveRequestDetails(application: application),
       ),
       bottomNavigationBar: application != null && application.isPending
           ? SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.sm, AppSpacing.xl, AppSpacing.lg),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: c.surfaceRaised,
+                  border: Border(top: BorderSide(color: c.line)),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
                 child: Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 54,
-                        child: OutlinedButton.icon(
+                        height: 48,
+                        child: OutlinedButton(
                           onPressed: _submitting != null ? null : _reject,
-                          icon: _submitting == LeaveStatus.rejected
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.navy),
-                                )
-                              : const Icon(Icons.close_rounded, size: 20),
-                          label: const Text('Reject'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.navy,
-                            side: const BorderSide(color: AppColors.navy, width: 1.4),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            foregroundColor: c.ink,
+                            side: BorderSide(color: c.danger, width: 1.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                          child: _submitting == LeaveStatus.rejected
+                              ? SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: c.danger,
+                                  ),
+                                )
+                              : const Text('Reject'),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: GradientButton(
-                        label: 'Approve',
-                        icon: Icons.check_rounded,
-                        isLoading: _submitting == LeaveStatus.approved,
-                        onPressed: _submitting != null ? null : _approve,
+                      child: SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          onPressed: _submitting != null ? null : _approve,
+                          icon: _submitting == LeaveStatus.approved
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check_rounded, size: 19),
+                          label: const Text('Approve'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: c.brand,
+                            foregroundColor: c.onBrand,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -167,8 +222,7 @@ class _AdminLeaveApplicationDetailScreenState extends ConsumerState<AdminLeaveAp
   }
 }
 
-/// Asks for an optional rejection reason. Pops with the trimmed reason
-/// (possibly empty), or `null` if dismissed.
+/// The review API requires a rejection reason.
 class _RejectDialog extends StatefulWidget {
   const _RejectDialog();
 
@@ -177,6 +231,7 @@ class _RejectDialog extends StatefulWidget {
 }
 
 class _RejectDialogState extends State<_RejectDialog> {
+  final _formKey = GlobalKey<FormState>();
   final _controller = TextEditingController();
 
   @override
@@ -189,16 +244,22 @@ class _RejectDialogState extends State<_RejectDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Reject leave?'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        minLines: 2,
-        maxLines: 4,
-        maxLength: 300,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(
-          hintText: 'Reason (optional, shown to the student)',
-          counterText: '',
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 4,
+          maxLength: 300,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            hintText: 'Reason for rejection',
+            counterText: '',
+          ),
+          validator: (value) => value == null || value.trim().isEmpty
+              ? 'Enter a reason to reject this request'
+              : null,
         ),
       ),
       actions: [
@@ -207,7 +268,11 @@ class _RejectDialogState extends State<_RejectDialog> {
           child: const Text('Cancel'),
         ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          onPressed: () {
+            if (_formKey.currentState?.validate() ?? false) {
+              Navigator.of(context).pop(_controller.text.trim());
+            }
+          },
           child: const Text('Reject'),
         ),
       ],

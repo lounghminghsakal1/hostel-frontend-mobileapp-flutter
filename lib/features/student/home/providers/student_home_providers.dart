@@ -9,5 +9,5 @@ final studentHomeRepositoryProvider = Provider<StudentHomeRepository>((ref) {
 });
 
 final studentHomeProvider = FutureProvider<StudentHomeModel>((ref) {
-  return ref.watch(studentHomeRepositoryProvider).getHomeScreen();
+  return ref.watch(studentHomeRepositoryProvider).getSplashScreen();
 });

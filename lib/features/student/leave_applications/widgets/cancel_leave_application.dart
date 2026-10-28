@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/hostel_colors.dart';
 import '../../../common/leave_applications/model/leave_application_model.dart';
 import '../../../common/leave_applications/providers/leave_applications_providers.dart';
 import '../../../common/leave_applications/widgets/leave_application_card.dart';
@@ -15,13 +15,14 @@ Future<bool> confirmAndCancelLeaveApplication(
   LeaveApplicationModel application, {
   void Function(bool busy)? onBusyChanged,
 }) async {
+  final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       icon: CircleAvatar(
         radius: 22,
-        backgroundColor: AppColors.errorSoft,
-        child: const Icon(Icons.event_busy_rounded, color: AppColors.error),
+        backgroundColor: c.dangerSoft,
+        child: Icon(Icons.event_busy_rounded, color: c.danger),
       ),
       title: const Text('Cancel this leave?'),
       content: Text(
@@ -36,7 +37,7 @@ Future<bool> confirmAndCancelLeaveApplication(
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          style: TextButton.styleFrom(foregroundColor: AppColors.error),
+          style: TextButton.styleFrom(foregroundColor: c.danger),
           child: const Text('Cancel leave'),
         ),
       ],
@@ -46,12 +47,14 @@ Future<bool> confirmAndCancelLeaveApplication(
 
   final messenger = ScaffoldMessenger.of(context);
   void show(String message) => messenger.showSnackBar(
-        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-      );
+    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+  );
 
   onBusyChanged?.call(true);
   try {
-    await ref.read(leaveApplicationsRepositoryProvider).cancelLeaveApplication(application.id);
+    await ref
+        .read(leaveApplicationsRepositoryProvider)
+        .cancelLeaveApplication(application.id);
     ref.invalidate(myLeaveApplicationsProvider);
     ref.invalidate(myLeaveApplicationDetailProvider(application.id));
     show('Leave application cancelled');

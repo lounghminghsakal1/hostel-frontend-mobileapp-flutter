@@ -16,7 +16,7 @@ class ApiEndpoints {
   /// Emails a password reset link to a registered address.
   static const String forgotPassword = '/students/forgot_password';
 
-  static const String studentHomeScreen = '/students/home';
+  static const String studentSplashScreen = '/students/splash_screen';
 
   static const String attendanceRecords = '/attendance_records';
 
@@ -38,14 +38,20 @@ class ApiEndpoints {
 
   static String leaveApplicationById(int id) => '$leaveApplications/$id';
 
-  static String reviewLeaveApplication(int id) => '$leaveApplications/$id/review';
+  static String reviewLeaveApplication(int id) =>
+      '$leaveApplications/$id/review';
 
-  static String cancelLeaveApplication(int id) => '$leaveApplications/$id/cancel';
+  static String cancelLeaveApplication(int id) =>
+      '$leaveApplications/$id/cancel';
 
   /// The signed-in student's own applications.
-  static const String myLeaveApplications = '$leaveApplications/student/my_leave_applications';
+  static const String myLeaveApplications =
+      '$leaveApplications/student/my_leave_applications';
 
   static String myLeaveApplicationById(int id) => '$myLeaveApplications/$id';
+
+  static const String announcements = '/announcements';
+  static String announcementById(int id) => '$announcements/$id';
 
   static const String upcomingEvents = '/upcoming_events';
 

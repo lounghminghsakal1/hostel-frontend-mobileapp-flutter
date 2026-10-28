@@ -18,7 +18,7 @@ Future<String?> captureStudentPhoto(BuildContext context) async {
     MaterialPageRoute(
       builder: (_) => const FaceCaptureScreen(
         lensDirection: CameraLensDirection.back,
-        hint: "Frame the student's face inside the square",
+        hint: "Frame the student's face inside the oval",
       ),
     ),
   );
@@ -58,8 +58,13 @@ class PhotoActionButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.navy,
         side: BorderSide(color: AppColors.navyAlpha(0.18)),
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.sm),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md,
+          horizontal: AppSpacing.sm,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );

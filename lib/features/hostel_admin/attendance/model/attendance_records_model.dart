@@ -146,9 +146,13 @@ class AbsentAttendanceRecord {
     final department = json['department'] ?? student?['department'];
     final dates = json['absentDates'];
     return AbsentAttendanceRecord(
-      studentImageKey: json['studentImageKey']?.toString(),
-      contactNumber: json['contactNumber']?.toString(),
-      parentMobileNumber: json['parentMobileNumber']?.toString(),
+      studentImageKey: (json['studentImageKey'] ?? student?['studentImageKey'])
+          ?.toString(),
+      contactNumber: (json['contactNumber'] ?? student?['contactNumber'])
+          ?.toString(),
+      parentMobileNumber:
+          (json['parentMobileNumber'] ?? student?['parentMobileNumber'])
+              ?.toString(),
       studentName:
           (json['studentName'] ?? student?['studentName'])?.toString() ?? '',
       rollNumber:
@@ -209,12 +213,24 @@ class AttendanceRecordsResult {
     required this.presentRecords,
     required this.absentRecords,
     required this.pagination,
+    this.pageSharePercentage,
   });
 
   final AttendanceSummary summary;
   final List<PresentAttendanceRecord> presentRecords;
   final List<AbsentAttendanceRecord> absentRecords;
   final PaginationMeta pagination;
+
+  /// Nullable server field whose current meaning is this page's share of all
+  /// matching rows. Keep it separate from the hostel attendance rate.
+  final double? pageSharePercentage;
+
+  double get attendancePercentage =>
+      (summary.totalStudents == 0
+              ? 0
+              : summary.presentCount / summary.totalStudents * 100)
+          .clamp(0, 100)
+          .toDouble();
 
   /// [data] is the response's `data` (`{summary, attendanceRecords}`) and
   /// [meta] its top-level `meta`.
@@ -240,6 +256,7 @@ class AttendanceRecordsResult {
         fallbackPage: query.page,
         pageSize: query.pageSize,
       ),
+      pageSharePercentage: _asDouble(data['percentage']),
     );
   }
 }

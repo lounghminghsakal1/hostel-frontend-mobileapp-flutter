@@ -13,6 +13,7 @@ import 'package:hostel_management_frontend_mobile_app_flutter/features/common/le
 import 'package:hostel_management_frontend_mobile_app_flutter/features/common/upcoming_events/data/upcoming_events_repository.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/attendance/model/attendance_records_model.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/students/data/students_repository.dart';
+import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/rooms/data/rooms_repository.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/students/providers/students_providers.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/students/screens/student_detail_screen.dart';
 
@@ -46,6 +47,39 @@ Map<String, dynamic> envelope(
 };
 
 void main() {
+  test('room catalog collects occupancy from every page and preserves search filters', () async {
+    final requests = <RequestOptions>[];
+    final dio = fakeDio((request) {
+      final page = int.parse(request.queryParameters['page'] as String);
+      return envelope(
+        [
+          {
+            'id': page,
+            'roomNumber': 'NH-1-10$page',
+            'capacity': 4,
+            'occupied': page == 1 ? 2 : 4,
+            'remaining': page == 1 ? 2 : 0,
+          },
+        ],
+        page: page,
+        pages: 2,
+      );
+    }, requests);
+    final rooms = await RoomsRepository(dio)
+        .getRooms(filters: {'by_student_name': 'Arun'});
+    expect(requests.map((r) => r.queryParameters['page']), ['1', '2']);
+    expect(
+      requests.every((r) => r.queryParameters['pageSize'] == '20'),
+      isTrue,
+    );
+    expect(
+      requests.every((r) => r.queryParameters['by_student_name'] == 'Arun'),
+      isTrue,
+    );
+    expect(rooms.map((room) => room.freeBeds), [2, 0]);
+    expect(rooms.where((room) => room.hasFreeBeds).length, 1);
+    expect(rooms.where((room) => room.isFull).length, 1);
+  });
   testWidgets(
     'student edit sends changed fields and reports an ignored roll-number update',
     (tester) async {

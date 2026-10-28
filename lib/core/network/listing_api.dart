@@ -8,13 +8,15 @@ class ListingPage {
     this.page,
     this.pageSize,
     this.totalPages,
-    this.counts,
-  );
+    this.counts, {
+    this.totalCount,
+  });
   final List<Map<String, dynamic>> rows;
   final int page;
   final int pageSize;
   final int totalPages;
   final Map<String, dynamic> counts;
+  final int? totalCount;
 }
 
 /// Endpoint-specific query keys are supplied by each feature.
@@ -49,18 +51,38 @@ class ListingApi {
       final rows = data is List
           ? data
           : data is Map
-          ? data['leaveApplications']
+          ? data['leaveApplications'] ??
+                data['announcements'] ??
+                data['students']
           : null;
       if (rows is! List) throw ApiException('Invalid list response');
       final meta = body['meta'] as Map<String, dynamic>? ?? {};
+      final countValue =
+          meta['totalCount'] ??
+          meta['total'] ??
+          (data is Map
+              ? data['totalAnnouncementsCount'] ??
+                    data['totalStudentsCount'] ??
+                    data['totalStudentsOfTheHostel'] ??
+                    data['totalCount']
+              : null);
+      final totalCount = switch (countValue) {
+        num value => value.toInt(),
+        String value => int.tryParse(value),
+        _ => null,
+      };
       return ListingPage(
         rows.cast<Map<String, dynamic>>(),
         (meta['page'] as num?)?.toInt() ?? page,
         (meta['pageSize'] as num?)?.toInt() ?? 20,
-        (meta['totalPages'] as num?)?.toInt() ?? 1,
+        (meta['totalPages'] as num?)?.toInt() ??
+            (totalCount == null
+                ? 1
+                : (totalCount / 20).ceil().clamp(1, 1000000)),
         data is Map
             ? Map<String, dynamic>.from(data['statusesCount'] as Map? ?? {})
             : {},
+        totalCount: totalCount,
       );
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);

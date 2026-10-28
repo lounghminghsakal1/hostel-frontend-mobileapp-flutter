@@ -1,22 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/router/app_routes.dart';
+import '../../../../core/theme/hostel_colors.dart';
+import '../../../../core/utils/date_format.dart';
 import '../../../../core/utils/camera_permission.dart';
 import '../../../../core/utils/location_permission.dart';
-import '../../../../core/widgets/app_empty_state.dart';
-import '../../../../core/widgets/section_header.dart';
-import '../../../../core/widgets/home_header.dart';
-import '../../../common/upcoming_events/providers/upcoming_events_providers.dart';
 import '../../../common/auth/widgets/logout.dart';
+import '../../../common/announcements/widgets/announcement_tile.dart';
 import '../../attendance/providers/attendance_providers.dart';
 import '../../attendance/screens/face_capture_screen.dart';
+import '../../attendance/screens/attendance_success_screen.dart';
 import '../../upcoming_events/widgets/upcoming_events_section.dart';
-import '../model/student_home_model.dart';
 import '../providers/student_home_providers.dart';
-import '../widgets/announcement_card.dart';
+import '../model/student_home_model.dart';
 import '../widgets/attendance_action_card.dart';
 
 class StudentHomeScreen extends ConsumerStatefulWidget {
@@ -26,9 +28,52 @@ class StudentHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<StudentHomeScreen> createState() => _StudentHomeScreenState();
 }
 
-class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
+class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen>
+    with WidgetsBindingObserver {
   bool _isSubmittingAttendance = false;
-  bool _justMarkedAttendance = false;
+  DateTime? _locallyMarkedAt;
+  Timer? _statusTimer;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(studentHomeProvider);
+    }
+  }
+
+  void _scheduleStatusRefresh(StudentHomeModel home) {
+    _statusTimer?.cancel();
+    final now = DateTime.now();
+    final local = indiaWallTime(now);
+    final midnight = indiaPickerToInstant(
+      DateTime(local.year, local.month, local.day + 1),
+    );
+    final boundaries = [
+      midnight,
+      home.windowOpensAt,
+      home.windowClosesAt,
+    ].whereType<DateTime>().where((t) => t.isAfter(now)).toList()..sort();
+    _statusTimer = Timer(
+      boundaries.first.difference(now) + const Duration(seconds: 1),
+      () {
+        if (mounted) {
+          ref.invalidate(studentHomeProvider);
+        }
+      },
+    );
+  }
 
   Future<void> _handleMarkAttendance() async {
     if (_isSubmittingAttendance) return;
@@ -43,16 +88,24 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
 
       final imagePath = await Navigator.of(context, rootNavigator: true)
           .push<String>(
-            MaterialPageRoute(builder: (_) => const FaceCaptureScreen()),
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/attendance/photo'),
+              builder: (_) => const FaceCaptureScreen(requireLocation: true),
+            ),
           );
       if (imagePath == null || !mounted) return;
 
+      // Recheck after capture in case access was revoked or GPS was disabled.
+      if (!await ensureCameraPermission(context) || !mounted) return;
+      if (!await ensureLocationPermission(context) || !mounted) return;
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           timeLimit: Duration(seconds: 20),
         ),
       );
+      if (!mounted) return;
+      final home = ref.read(studentHomeProvider).valueOrNull;
       final repository = ref.read(attendanceRepositoryProvider);
       final imageKey = await repository.uploadAttendanceImage(imagePath);
       await repository.submitAttendanceRecord(
@@ -61,16 +114,22 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
         longitude: position.longitude,
       );
       if (!mounted) return;
-      setState(() {
-        _isSubmittingAttendance = false;
-        _justMarkedAttendance = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Attendance marked successfully'),
-          behavior: SnackBarBehavior.floating,
+      final markedAt = DateTime.now();
+      setState(() => _locallyMarkedAt = markedAt);
+      ref.invalidate(studentHomeProvider);
+      await Navigator.of(context, rootNavigator: true).push<void>(
+        PageRouteBuilder<void>(
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, animation, secondaryAnimation) =>
+              AttendanceSuccessScreen(
+                markedAt: markedAt,
+                windowOpensAt: home?.windowOpensAt,
+                windowClosesAt: home?.windowClosesAt,
+              ),
         ),
       );
+      if (mounted) ref.invalidate(studentHomeProvider);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmittingAttendance = false);
@@ -84,39 +143,256 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
   Future<void> _handleRefreshAttendanceStatus() async {
     ref.invalidate(studentHomeProvider);
     await ref.read(studentHomeProvider.future);
-    if (mounted) setState(() => _justMarkedAttendance = false);
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(studentHomeProvider, (_, next) {
+      final home = next.valueOrNull;
+      if (home != null) _scheduleStatusRefresh(home);
+    });
     final homeAsync = ref.watch(studentHomeProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.paper,
-      body: SafeArea(
-        top: false,
-        child: Column(
+    final home = homeAsync.valueOrNull;
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
+    final hour = indiaWallTime(DateTime.now()).hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: c.surface,
+        body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            HomeHeader(
-              greeting: 'Your hostel, at a glance',
-              subtitle: 'Attendance, events and announcements',
-              initials: 'ST',
-              onLogout: () => confirmLogout(context, ref),
+            Container(
+              decoration: BoxDecoration(
+                color: c.brand,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(28),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+              child: SafeArea(
+                bottom: false,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            greeting,
+                            style: TextStyle(
+                              color: c.onBrandMuted,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            home?.studentName ?? 'Student',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: c.onBrand,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.bed_outlined,
+                                size: 16,
+                                color: c.onBrandMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  [
+                                    if (home?.roomNumber != null)
+                                      home!.roomNumber!,
+                                    home?.hostelName ?? 'Our Hostel',
+                                  ].join(' \u00b7 '),
+                                  style: TextStyle(
+                                    color: c.onBrandMuted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Account',
+                      onSelected: (_) => confirmLogout(context, ref),
+                      itemBuilder: (_) => [
+                        if (home?.accountEmail != null)
+                          PopupMenuItem<String>(
+                            enabled: false,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  home!.accountEmail!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${home.roleName ?? 'Student'} · ${home.accountStatus ?? 'Account'}',
+                                  style: TextStyle(
+                                    color: c.inkMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Text('Log out'),
+                        ),
+                      ],
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: c.brandRaised,
+                        child: Text(
+                          home?.initials ?? 'ST',
+                          style: TextStyle(
+                            color: c.onBrand,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             Expanded(
-              child: homeAsync.when(
-                loading: () => const _StudentHomeSkeleton(),
-                error: (error, _) => _StudentHomeError(
-                  message: error.toString(),
-                  onRetry: () => ref.invalidate(studentHomeProvider),
-                ),
-                data: (home) => _StudentHomeContent(
-                  home: home,
-                  isSubmitting: _isSubmittingAttendance,
-                  justMarked: _justMarkedAttendance,
-                  onMarkAttendance: _handleMarkAttendance,
-                  onRefreshStatus: _handleRefreshAttendanceStatus,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  try {
+                    await _handleRefreshAttendanceStatus();
+                  } catch (_) {}
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  children: [
+                    homeAsync.when(
+                      loading: () => Container(
+                        height: 194,
+                        decoration: BoxDecoration(
+                          color: c.surfaceSunken,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (e, _) => _SectionError(
+                        message: '$e',
+                        onRetry: () => ref.invalidate(studentHomeProvider),
+                      ),
+                      data: (data) => AttendanceActionCard(
+                        home: data,
+                        locallyMarkedAt: _locallyMarkedAt,
+                        isBusy: _isSubmittingAttendance,
+                        onMark: _handleMarkAttendance,
+                        onRefresh: () async {
+                          try {
+                            await _handleRefreshAttendanceStatus();
+                          } catch (_) {}
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Announcements',
+                          style: TextStyle(
+                            color: c.ink,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              context.go(AppRoutes.studentAnnouncements),
+                          style: TextButton.styleFrom(
+                            foregroundColor: c.primary,
+                          ),
+                          child: const Text('See all'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    homeAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (data) => Container(
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: c.surfaceRaised,
+                          border: Border.all(color: c.line),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: data.announcements.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  'No announcements yet',
+                                  style: TextStyle(color: c.inkMuted),
+                                ),
+                              )
+                            : Column(
+                                children: [
+                                  for (
+                                    var i = 0;
+                                    i < data.announcements.take(2).length;
+                                    i++
+                                  ) ...[
+                                    if (i != 0)
+                                      Divider(height: 1, color: c.line),
+                                    AnnouncementTile(
+                                      announcement: data.announcements[i],
+                                      expanded: i == 0,
+                                      onTap: () => context.push(
+                                        AppRoutes.studentAnnouncementDetail(
+                                          data.announcements[i].id,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    homeAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (data) =>
+                          UpcomingEventsSection(events: data.upcomingEvents),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -127,173 +403,18 @@ class _StudentHomeScreenState extends ConsumerState<StudentHomeScreen> {
   }
 }
 
-class _StudentHomeContent extends ConsumerWidget {
-  const _StudentHomeContent({
-    required this.home,
-    required this.isSubmitting,
-    required this.justMarked,
-    required this.onMarkAttendance,
-    required this.onRefreshStatus,
-  });
-
-  final StudentHomeModel home;
-  final bool isSubmitting;
-  final bool justMarked;
-  final VoidCallback onMarkAttendance;
-  final Future<void> Function() onRefreshStatus;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Once marked, the card shows as inactive until the student taps it
-    // again to re-check `/students/home` for a fresh `canMarkAttendance`.
-    final canMark = home.canMarkAttendance && !justMarked;
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(upcomingEventsProvider);
-        try {
-          await onRefreshStatus();
-        } catch (_) {
-          // The provider displays a retry action when refreshing fails.
-        }
-      },
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AttendanceActionCard(
-              canMarkAttendance: canMark,
-              isBusy: isSubmitting,
-              isComplete: justMarked,
-              inactiveMessage: justMarked
-                  ? 'Attendance marked for today · tap to check again'
-                  : 'Attendance window is closed right now',
-              onTap: canMark
-                  ? onMarkAttendance
-                  : () async {
-                      try {
-                        await onRefreshStatus();
-                      } catch (_) {
-                        // The home provider renders the error with a retry action.
-                      }
-                    },
-            ),
-            const SizedBox(height: 26),
-            const UpcomingEventsSection(),
-            const SectionHeader(title: 'Announcements'),
-            const SizedBox(height: 14),
-            if (home.announcements.isEmpty)
-              const AppEmptyState(
-                icon: Icons.campaign_outlined,
-                title: 'No announcements yet',
-                message: 'Hostel updates and notices will show up here.',
-              )
-            else
-              ...home.announcements.map(
-                (a) => AnnouncementCard(announcement: a),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StudentHomeSkeleton extends StatelessWidget {
-  const _StudentHomeSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.md,
-        AppSpacing.xl,
-        AppSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SkeletonBox(height: 150, radius: AppRadius.xl),
-          const SizedBox(height: AppSpacing.xxl),
-          _SkeletonBox(height: 18, width: 140, radius: AppRadius.sm),
-          const SizedBox(height: AppSpacing.md),
-          _SkeletonBox(height: 96, radius: AppRadius.lg),
-          const SizedBox(height: AppSpacing.lg),
-          _SkeletonBox(height: 18, width: 160, radius: AppRadius.sm),
-          const SizedBox(height: AppSpacing.md),
-          _SkeletonBox(height: 72, radius: AppRadius.lg),
-          const SizedBox(height: AppSpacing.md),
-          _SkeletonBox(height: 72, radius: AppRadius.lg),
-        ],
-      ),
-    );
-  }
-}
-
-/// Static placeholder box used while the home screen loads. Deliberately
-/// unanimated — this feature area reserves its one animated moment for the
-/// attendance check-in confirmation.
-class _SkeletonBox extends StatelessWidget {
-  const _SkeletonBox({required this.height, this.width, required this.radius});
-
-  final double height;
-  final double? width;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: AppColors.navySoft,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-}
-
-class _StudentHomeError extends StatelessWidget {
-  const _StudentHomeError({required this.message, required this.onRetry});
-
+class _SectionError extends StatelessWidget {
+  const _SectionError({required this.message, required this.onRetry});
   final String message;
   final VoidCallback onRetry;
-
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.errorSoft,
-              child: Icon(
-                Icons.wifi_off_rounded,
-                color: AppColors.error,
-                size: 26,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.navyAlpha(0.65),
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextButton(onPressed: onRetry, child: const Text('Try again')),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      children: [
+        Text(message, textAlign: TextAlign.center),
+        TextButton(onPressed: onRetry, child: const Text('Try again')),
+      ],
+    ),
+  );
 }

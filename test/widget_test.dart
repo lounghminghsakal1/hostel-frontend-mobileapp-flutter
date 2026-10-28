@@ -13,6 +13,7 @@ import 'package:hostel_management_frontend_mobile_app_flutter/features/common/le
 import 'package:hostel_management_frontend_mobile_app_flutter/features/common/upcoming_events/providers/upcoming_events_providers.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/rooms/model/room_model.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/rooms/providers/rooms_providers.dart';
+import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/rooms/widgets/room_occupancy_card.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/hostel_admin/students/providers/students_providers.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/student/home/model/student_home_model.dart';
 import 'package:hostel_management_frontend_mobile_app_flutter/features/student/home/providers/student_home_providers.dart';
@@ -81,8 +82,7 @@ Future<ProviderContainer> _pumpApp(
       ),
       authControllerProvider.overrideWith(() => auth ?? _TestAuthController()),
       studentHomeProvider.overrideWith(
-        (ref) async =>
-            const StudentHomeModel(canMarkAttendance: true, announcements: []),
+        (ref) async => const StudentHomeModel(canMarkAttendance: true),
       ),
       upcomingEventsProvider.overrideWith((ref) async => []),
       upcomingEventDetailProvider(7)
@@ -90,10 +90,23 @@ Future<ProviderContainer> _pumpApp(
       myLeaveApplicationsProvider.overrideWith((ref) async => []),
       roomsListProvider.overrideWith(
         (ref) async => const [
-          RoomModel(id: 1, roomNumber: '101'),
-          RoomModel(id: 2, roomNumber: '202'),
+          RoomModel(
+            id: 1,
+            roomNumber: '101',
+            capacity: 2,
+            occupied: 1,
+            remaining: 1,
+          ),
+          RoomModel(
+            id: 2,
+            roomNumber: '202',
+            capacity: 2,
+            occupied: 2,
+            remaining: 0,
+          ),
         ],
       ),
+      roomsMatchingStudentProvider('101').overrideWith((ref) async => <int>{}),
       studentsListProvider.overrideWith((ref) async => []),
     ],
   );
@@ -119,8 +132,9 @@ void main() {
   ) async {
     final auth = _TestAuthController();
     await _pumpApp(tester, AppRoutes.login, auth: auth);
-    await tester.ensureVisible(find.text('Sign in'));
-    await tester.tap(find.text('Sign in'));
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Enter your email address'), findsOneWidget);
     expect(find.text('Enter your password'), findsOneWidget);
@@ -140,9 +154,10 @@ void main() {
     tester.view.viewInsets = const FakeViewPadding(bottom: 260);
     addTearDown(tester.view.reset);
     await _pumpApp(tester, AppRoutes.login);
-    await tester.ensureVisible(find.text('Sign in'));
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Enter your password'), findsOneWidget);
   });
@@ -163,8 +178,8 @@ void main() {
     tester,
   ) async {
     final container = await _pumpApp(tester, AppRoutes.studentHome);
-    expect(find.text('Mark Attendance'), findsOneWidget);
-    expect(find.byType(NavigationDestination), findsNWidgets(3));
+    expect(find.text('Mark attendance'), findsOneWidget);
+    expect(find.byType(NavigationDestination), findsNWidgets(4));
     await tester.tap(find.text('Leave'));
     await tester.pumpAndSettle();
     expect(
@@ -180,7 +195,7 @@ void main() {
     );
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    expect(find.text('Mark Attendance'), findsOneWidget);
+    expect(find.text('Mark attendance'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -189,13 +204,11 @@ void main() {
     (tester) async {
       await _pumpApp(tester, AppRoutes.adminRooms);
       expect(find.byType(NavigationDestination), findsNWidgets(5));
-      await tester.tap(find.text('Search and filters'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField).first, '101');
+      await tester.enterText(find.byType(TextField).first, '101');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
-      expect(find.text('Room 101'), findsOneWidget);
-      expect(find.text('Room 202'), findsNothing);
+      expect(find.widgetWithText(RoomOccupancyCard, '101'), findsOneWidget);
+      expect(find.text('202'), findsNothing);
       await tester.tap(find.text('Students'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rooms').last);
@@ -207,7 +220,7 @@ void main() {
             .text,
         '101',
       );
-      await tester.enterText(find.byType(TextFormField).first, '');
+      await tester.tap(find.byTooltip('Clear search'));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(
@@ -217,10 +230,30 @@ void main() {
             .text,
         '',
       );
-      expect(find.text('Room 101'), findsOneWidget);
-      expect(find.text('Room 202'), findsOneWidget);
+      expect(find.text('101'), findsOneWidget);
+      expect(find.text('202'), findsOneWidget);
     },
   );
+
+  testWidgets('Room availability filters use occupancy across the catalog', (
+    tester,
+  ) async {
+    await _pumpApp(tester, AppRoutes.adminRooms);
+    expect(find.text('2 rooms \u00b7 1 beds free'), findsOneWidget);
+    await tester.tap(find.text('Has free beds  1'));
+    await tester.pumpAndSettle();
+    expect(find.text('101'), findsOneWidget);
+    expect(find.text('202'), findsNothing);
+    await tester.tap(find.text('Full  1'));
+    await tester.pumpAndSettle();
+    expect(find.text('101'), findsNothing);
+    expect(find.text('202'), findsOneWidget);
+    await tester.tap(find.text('All  2'));
+    await tester.pumpAndSettle();
+    expect(find.text('101'), findsOneWidget);
+    expect(find.text('202'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Event details hide navigation and Back returns to the event list',

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/hostel_colors.dart';
 import '../model/leave_application_model.dart';
 
 /// Status pill. Each status reads by hue, like a register: green for
@@ -12,28 +12,17 @@ class LeaveStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = Theme.of(context).extension<HostelColors>() ?? HostelColors.light;
     final (icon, background, foreground) = switch (status) {
       LeaveStatus.approved => (
-        Icons.check_circle_rounded,
-        AppColors.successSoft,
-        AppColors.success,
+        Icons.check_circle_outline_rounded,
+        c.successSoft,
+        c.success,
       ),
-      LeaveStatus.pending => (
-        Icons.schedule_rounded,
-        AppColors.pendingSoft,
-        AppColors.pending,
-      ),
-      LeaveStatus.rejected => (
-        Icons.cancel_outlined,
-        AppColors.errorSoft,
-        AppColors.error,
-      ),
+      LeaveStatus.pending => (Icons.schedule_rounded, c.warningSoft, c.warning),
+      LeaveStatus.rejected => (Icons.cancel_outlined, c.dangerSoft, c.danger),
       LeaveStatus.cancelled ||
-      LeaveStatus.unknown => (
-        Icons.block_rounded,
-        AppColors.navyAlpha(0.05),
-        AppColors.navyAlpha(0.5),
-      ),
+      LeaveStatus.unknown => (Icons.block_rounded, c.surfaceSunken, c.inkMuted),
     };
 
     return Container(
@@ -47,9 +36,15 @@ class LeaveStatusChip extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: foreground),
           const SizedBox(width: 5),
-          Text(
-            status.label,
-            style: TextStyle(color: foreground, fontSize: 11.5, fontWeight: FontWeight.w700),
+          Flexible(
+            child: Text(
+              status.label,
+              style: TextStyle(
+                color: foreground,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),

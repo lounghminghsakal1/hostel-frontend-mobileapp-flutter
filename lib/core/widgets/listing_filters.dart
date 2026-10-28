@@ -65,11 +65,14 @@ class ListingFilters extends ConsumerStatefulWidget {
     required this.fields,
     required this.onChanged,
     this.dates = false,
+    this.dateRangeLabel = 'Event date range',
+    this.dateRangeHelp = 'Events starting and ending within this range. Boundaries use UTC dates.',
     this.values,
   });
   final List<ListingFilter> fields;
   final ValueChanged<Map<String, String>> onChanged;
   final bool dates;
+  final String dateRangeLabel, dateRangeHelp;
   final Map<String, String>? values;
   @override
   ConsumerState<ListingFilters> createState() => _ListingFiltersState();
@@ -133,7 +136,7 @@ class _ListingFiltersState extends ConsumerState<ListingFilters> {
                 icon: const Icon(Icons.date_range),
                 label: Text(
                   _range == null
-                      ? 'Event date range'
+                      ? widget.dateRangeLabel
                       : '${toIsoDate(_range!.start)} – ${toIsoDate(_range!.end)}',
                 ),
                 onPressed: () async {
@@ -161,10 +164,7 @@ class _ListingFiltersState extends ConsumerState<ListingFilters> {
             ),
           ],
         ),
-      if (widget.dates)
-        const Text(
-          'Events starting and ending within this range. Boundaries use UTC dates.',
-        ),
+      if (widget.dates) Text(widget.dateRangeHelp),
     ],
   );
   Widget _field(ListingFilter field) {

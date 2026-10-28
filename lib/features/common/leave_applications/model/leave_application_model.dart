@@ -39,6 +39,9 @@ class LeaveApplicationModel {
     this.student,
     this.rollNumber,
     this.roomNumber,
+    this.departmentName,
+    this.contactNumber,
+    this.parentMobileNumber,
   });
 
   final int id;
@@ -57,6 +60,9 @@ class LeaveApplicationModel {
   final StudentModel? student;
   final String? rollNumber;
   final String? roomNumber;
+  final String? departmentName;
+  final String? contactNumber;
+  final String? parentMobileNumber;
 
   /// Inclusive day count, e.g. 3 Oct – 3 Oct is 1 day.
   int get days => toDate.difference(fromDate).inDays + 1;
@@ -68,6 +74,7 @@ class LeaveApplicationModel {
   factory LeaveApplicationModel.fromJson(Map<String, dynamic> json) {
     final student = _map(json['student']);
     final room = _map(json['room'] ?? student?['room']);
+    final department = student?['department'];
     return LeaveApplicationModel(
       id: _asInt(json['id'])!,
       leaveReason: json['leaveReason']?.toString() ?? '',
@@ -83,6 +90,19 @@ class LeaveApplicationModel {
       studentName: _nonEmpty(json['studentName'] ?? student?['studentName']),
       rollNumber: _nonEmpty(json['rollNumber'] ?? student?['rollNumber']),
       roomNumber: _nonEmpty(json['roomNumber'] ?? room?['roomNumber']),
+      departmentName: _nonEmpty(
+        json['departmentName'] ??
+            student?['departmentName'] ??
+            (department is Map
+                ? department['departmentName'] ?? department['name']
+                : department),
+      ),
+      contactNumber: _nonEmpty(
+        json['contactNumber'] ?? student?['contactNumber'],
+      ),
+      parentMobileNumber: _nonEmpty(
+        json['parentMobileNumber'] ?? student?['parentMobileNumber'],
+      ),
     );
   }
 }

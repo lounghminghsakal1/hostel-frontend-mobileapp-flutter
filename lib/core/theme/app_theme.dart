@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
+import 'hostel_colors.dart';
 
 class AppTheme {
   AppTheme._();
@@ -65,6 +66,7 @@ class AppTheme {
         );
 
     return base.copyWith(
+      extensions: const [HostelColors.light],
       scaffoldBackgroundColor: AppColors.paper,
       colorScheme: base.colorScheme.copyWith(
         primary: AppColors.navy,
